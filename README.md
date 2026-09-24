@@ -1,9 +1,5 @@
 # BLACKOUT
 
-> **This is the Replit-targeted mirror** of
-> [moumenalaoui/BLACKOUT](https://github.com/moumenalaoui/BLACKOUT), which is
-> deployed on Railway. See [Deployment (Replit)](#deployment-replit).
-
 BLACKOUT is a read-only web app for exploring internet freedom, censorship, and network disruption by country. It combines a React/Cesium globe frontend with a Rust/Axum API, a local SQLite store, background fetchers, and a small set of seeded reference data.
 
 ## What the app does
@@ -59,7 +55,7 @@ counted in `total`, but are left out of `/api/satellites` and their orbit
 endpoint returns 422 — SGP4 cannot produce a meaningful position from them,
 and a confidently-wrong dot is worse than no dot.
 
-**This requires persistent storage**, which on Replit means the App Storage snapshot rather than a disk. See [Deployment (Replit)](#deployment-replit).
+This requires persistent storage; see [Deployment](#deployment).
 
 ## Data sources
 
@@ -160,35 +156,38 @@ Notes:
 - `POST /api/evaluate` exists in code but is not mounted in the public read-only app.
 - `/api/models` and `/api/signals` are exposed by the backend but are not currently used by the shipped frontend.
 
-## Deployment (Replit)
+## Deployment
 
-Replit does not build Dockerfiles. The whole build/run contract is two files
-at the repo root:
+The app runs on Replit as a Reserved VM. There is no Dockerfile; the build and
+run contract lives in two files at the repo root:
 
 - `.replit` — build and run commands, `[deployment]`, port mapping, `[env]`
-- `replit.nix` — Rust, Node, OpenSSL, a C toolchain (for rusqlite's bundled
-  SQLite) and `cacert`
+- `replit.nix` — `rustup`, Node, OpenSSL, a C toolchain (for `rusqlite`'s
+  bundled SQLite) and `cacert`
 
-Publish as a **Reserved VM**, not Autoscale. The fetch loops (6h), precision
-loops (1h), satellite refresh (2h) and snapshot loop (3h) all run on timers in
-the background; an Autoscale deployment scales to zero between requests and
-would simply never run them. Budget **≥ 2 vCPU / 4 GB** — linking 185 Rust
-crates is the build's memory peak, and at runtime `/api/satellites` propagates
-every matching element set with SGP4 on every request, polled every 7s per
-connected browser.
+The Rust toolchain is pinned in `.replit`'s build command through `rustup`
+rather than taken from the Nix channel, whose Cargo is older than
+`edition = "2024"` requires. The build stage copies the release binary to
+`bin/` because `backend/target/` is excluded from what is handed to the run
+stage.
 
-Set `CLOUDFLARE_API_TOKEN` and `PULSE_API_TOKEN` in Replit Secrets. Both are
-optional; without them those sources render empty and a `WARNING` block at
-boot says so. **Replit keeps workspace secrets and deployment secrets as two
-separate sets** — a key added only in the workspace is undefined in the
-published app, which looks exactly like a source having no data.
+Reserved VM rather than Autoscale: the fetch loops (6h), precision loops (1h),
+satellite refresh (2h) and snapshot loop (3h) are timer-driven, and an
+Autoscale deployment scales to zero between requests and never runs them. The
+build links ~200 crates and compiles SQLite from C source, so it wants at
+least 2 vCPU / 4 GB. At runtime `/api/satellites` propagates every matching
+element set with SGP4 on each request, polled every 7s per connected browser.
 
-### The database is not on the filesystem in any durable sense
+Replit keeps workspace secrets and deployment secrets as separate sets. A key
+present only in the workspace is undefined in the published app, which is
+indistinguishable from a source genuinely having no data.
+
+### Persistence
 
 Publishing rebuilds the app's files from the workspace tree, so
-`DATABASE_PATH` is empty after every publish. That is not a cold cache — it is
-data loss. Three fetchers pull **bounded rolling windows** and accumulate
-history locally that upstream will never return again:
+`DATABASE_PATH` does not survive a deploy. That is data loss rather than a
+cold cache: three fetchers pull bounded rolling windows and accumulate history
+locally that upstream will not return again.
 
 | Table | Window | Fetcher |
 | --- | --- | --- |
@@ -196,93 +195,78 @@ history locally that upstream will never return again:
 | `bgp_prefix_visibility` | 14 days | `fetchers/ripestat.rs` |
 | `http_protocol_share` | 14 days | `fetchers/cloudflare_http.rs` |
 
-— on top of `satellite_catalog`, which cannot be rebuilt on demand at all.
+That is on top of `satellite_catalog`, which cannot be rebuilt on demand at
+all.
 
-So the database is snapshotted to **Replit App Storage** instead. `SNAPSHOT_KEY`
-in `.replit` turns this on; unset, the layer is completely inert (which is what
-you want locally). On boot, if `DATABASE_PATH` is absent, the snapshot is
-downloaded, verified and put in place before SQLite opens it. It is written
-back every `SNAPSHOT_INTERVAL_MINUTES` (default 180, only when something has
-actually been written) and once more on `SIGTERM` — the shutdown snapshot is
-what makes an ordinary redeploy lossless, and the interval only bounds what an
-unplanned crash costs.
+The database is therefore snapshotted to Replit App Storage. `SNAPSHOT_KEY` in
+`.replit` enables the layer; with it unset the layer is inert, which is the
+local-development case. On boot, when `DATABASE_PATH` is absent, the stored
+snapshot is downloaded, verified and put in place before SQLite opens it. It
+is written back every `SNAPSHOT_INTERVAL_MINUTES` (default 180, and only when
+something has been written since the last one) and once more on `SIGTERM`. The
+shutdown snapshot is what makes an ordinary redeploy lossless; the interval
+bounds only what an unplanned crash costs.
 
-A snapshot is `VACUUM INTO` plus gzip, so it is a consistent, defragmented
-image at roughly a quarter the size of the live file.
+A snapshot is `VACUUM INTO` plus gzip — a consistent, defragmented image at
+roughly a quarter the size of the live file. The bucket was seeded from an
+existing database, so the first deploy started with full history rather than a
+cold fetch.
 
-**A failed restore never overwrites a good snapshot.** If the download errors,
-no snapshot task is spawned at all for that process — there is no code path
-that could write — and a loud `WARNING` block says so. A clean 404 ("nothing
-stored yet") is deliberately a different outcome and does allow writes. On top
-of that, a snapshot whose uncompressed size has collapsed below
-`SNAPSHOT_MIN_RETAIN_RATIO` (default 0.5) of the last good one is refused; same
-reasoning as the satellite shrinkage guard.
+A failed restore never overwrites a good snapshot. When the download errors no
+snapshot task is spawned for that process, so no code path can write, and a
+`WARNING` block says so. A clean 404 — nothing stored yet — is deliberately a
+different outcome and does allow writes. A snapshot whose uncompressed size
+has collapsed below `SNAPSHOT_MIN_RETAIN_RATIO` (default 0.5) of the last good
+one is refused, on the same reasoning as the satellite shrinkage guard.
 
-### Seeding the first deploy
+### Outbound identity
 
-Upload an existing database so the first boot starts with full history instead
-of a cold fetch and a 503 window:
+Every outbound request carries
+`blackout-<fetcher>/<version> (+<contact>; id=<DEPLOYMENT_ID>)`, and RIPEstat's
+`sourceapp` derives from the same value. The identity is built in
+`backend/src/util/http.rs`, every HTTP client in the codebase is constructed
+through it, and the boot log prints the result.
 
-```sh
-sqlite3 mena_ai.db "VACUUM INTO '/tmp/mena_ai.db'"
-gzip -9 /tmp/mena_ai.db
-# upload /tmp/mena_ai.db.gz to App Storage as the object named by SNAPSHOT_KEY
-```
+This is identification, not rate-limit management. Upstream limits are
+enforced either on the credential — Cloudflare Radar, Internet Society Pulse,
+PeeringDB — or on the source IP — OONI, IODA, Tor Metrics, RIPEstat, CelesTrak,
+SatNOGS and Our World in Data. Several of those are free services run by
+volunteers or a small nonprofit, and identifying honestly costs nothing.
 
-### Reading the boot log
+### Credentials
+
+All three are free, and all are optional in the sense that the app starts
+without them; a `WARNING` block at boot names any that are missing.
+
+| Secret | Gates | Scope |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Radar outage annotations and HTTP-version share | `Account` → `Radar` → `Read` |
+| `PULSE_API_TOKEN` | Internet Resilience Index | n/a |
+| `PEERINGDB_API_KEY` | `scripts/gen_ixp_data.mjs` only, never the server | read-only |
+
+Without the first two, those sources render empty rather than erroring.
+`PEERINGDB_API_KEY` matters only when regenerating the committed IXP seed
+data: PeeringDB throttles unauthenticated callers hard — an observed
+59-minute lockout after three quick requests — though the script works
+without one.
+
+### Boot log
 
 A healthy redeploy prints:
 
 ```text
-snapshot: restored /home/runner/data/mena_ai.db from replit-objstore-.../mena_ai.db.gz (18.4 MiB compressed -> 71.2 MiB).
-DB restored: existing database at /home/runner/data/mena_ai.db (boot #7), 16284 satellite(s) in the persistent catalog
-satellites: loaded 16284 satellites from the persistent catalog; catalog age 47m
+snapshot: restored /home/runner/data/mena_ai.db from replit-objstore-.../mena_ai.db.gz (19.1 MiB compressed -> 84.0 MiB).
+DB restored: existing database at /home/runner/data/mena_ai.db (boot #3), 13587 satellite(s) in the persistent catalog
+satellites: loaded 13587 satellites from the persistent catalog; catalog age 47m
 Snapshot loop: every 180m -> replit-objstore-.../mena_ai.db.gz
 ```
 
-`boot #1` on anything but a first-ever deploy means the restore did not happen
-and state is being lost. The `snapshot:` lines above it say why: no
+`boot #1` on anything other than a first-ever deploy means the restore did not
+happen and state is being lost. The `snapshot:` lines above it say why: no
 `SNAPSHOT_KEY`, no App Storage sidecar, or a failed download.
-
-## Running two deployments against the same upstreams
-
-Every outbound request carries
-`blackout-<fetcher>/<version> (+<contact>; id=<DEPLOYMENT_ID>)`, and RIPEstat's
-`sourceapp` defaults to `blackout-<DEPLOYMENT_ID>`. Set `DEPLOYMENT_ID` and
-both follow; the identity is built in one place (`backend/src/util/http.rs`)
-and every HTTP client in the codebase is constructed through it. The boot log
-prints the result, and warns if `DEPLOYMENT_ID` was never set.
-
-Be precise about what that separates, because the intuitive answer is wrong.
-Upstream limits here are enforced on one of two things:
-
-| Enforced on | Sources | How to separate two deployments |
-| --- | --- | --- |
-| The credential | Cloudflare Radar, Internet Society Pulse, PeeringDB | **A separate token per deployment.** Nothing else works. |
-| The source IP | OONI, IODA, Tor Metrics, RIPEstat, CelesTrak, SatNOGS, OWID | Already separate — two hosts, two addresses. |
-
-`DEPLOYMENT_ID` separates neither. What it buys is that an upstream operator
-who throttles or blocks someone can tell *which* instance it was, and has
-somewhere to write. Several of these are free services run by volunteers or a
-small nonprofit.
-
-The three credentials, all free, all per-deployment:
-
-| Secret | Where to get it | Scope |
-| --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Custom Token | `Account` → `Radar` → `Read`, nothing else |
-| `PULSE_API_TOKEN` | `pulse.internetsociety.org` account → profile → generate key (label it per deployment) | n/a |
-| `PEERINGDB_API_KEY` | PeeringDB account → profile page | read-only |
-
-`PEERINGDB_API_KEY` is read only by `scripts/gen_ixp_data.mjs`, a one-off
-generator whose output is committed. PeeringDB throttles unauthenticated
-callers hard — an observed 59-minute lockout after three quick requests — so
-the key is worth having before re-running it, though the script works without
-one.
 
 ## Notes
 
 - The deployment model is public and read-only. There is no auth layer.
 - Data freshness is mixed by design: some datasets are periodically fetched, some are committed seed files, and Starlink status is manually maintained.
-- Built by Moumen Alaoui at the FAI Hackathon 2026.
-- Upstream, deployed on Railway: [moumenalaoui/BLACKOUT](https://github.com/moumenalaoui/BLACKOUT)
+- Built by Moumen Alaoui at the FAI Hackathon 2026, from [moumenalaoui/BLACKOUT](https://github.com/moumenalaoui/BLACKOUT).
