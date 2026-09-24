@@ -37,7 +37,7 @@ const DEFAULT_DEPLOYMENT_ID: &str = "local";
 
 /// Where an upstream operator can find out what this is. Overridable because
 /// a fork or a second deployment should be able to point somewhere else.
-const DEFAULT_CONTACT: &str = "https://github.com/moumenalaoui/globe";
+const DEFAULT_CONTACT: &str = "https://github.com/moumenalaoui/BLACKOUT";
 
 /// Long enough for a descriptive slug, short enough that it cannot be used to
 /// smuggle anything interesting into a header or a query string.

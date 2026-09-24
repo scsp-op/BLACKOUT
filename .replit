@@ -18,7 +18,7 @@
 # backend/src/snapshot. See README "Deployment (Replit)".
 
 run = "./bin/blackout"
-build = "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked && cd .. && mkdir -p bin && cp backend/target/release/backend bin/blackout"
+build = "rustup toolchain install 1.91.0 --profile minimal --no-self-update && rustup default 1.91.0 && cargo --version && cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked && cd .. && mkdir -p bin && cp backend/target/release/backend bin/blackout"
 
 entrypoint = "backend/src/main.rs"
 
@@ -38,6 +38,14 @@ channel = "stable-24_05"
 # background on a timer. An Autoscale deployment scales to zero between
 # requests and would simply never run them.
 deploymentTarget = "vm"
+# 1.91.0 specifically because it is the version this crate was verified
+# against (`cargo +1.91.0 check --locked --all-targets`, clean) rather than
+# the nearest plausible number. The toolchain install runs FIRST, before npm,
+# so a toolchain problem fails in ~30s instead of after the two-minute
+# frontend phase. `cargo --version` is
+# echoed on purpose: the last failure was a Cargo version mismatch that no log
+# line would have revealed until it blew up.
+#
 # The final `cp` is not tidiness. `backend/target/` is excluded from what the
 # build stage hands to the run stage (it reaches several GB), so the binary
 # has to be lifted out of it into a path that ships. `test -x` makes a failed
@@ -46,7 +54,7 @@ deploymentTarget = "vm"
 build = [
   "bash",
   "-c",
-  "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked && cd .. && mkdir -p bin && cp backend/target/release/backend bin/blackout && test -x bin/blackout && test -f frontend/dist/index.html && echo 'artifacts staged: bin/blackout + frontend/dist'",
+  "rustup toolchain install 1.91.0 --profile minimal --no-self-update && rustup default 1.91.0 && cargo --version && cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked && cd .. && mkdir -p bin && cp backend/target/release/backend bin/blackout && test -x bin/blackout && test -f frontend/dist/index.html && echo 'artifacts staged: bin/blackout + frontend/dist'",
 ]
 run = ["./bin/blackout"]
 

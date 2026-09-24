@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 
 const DEFAULT_DEPLOYMENT_ID = 'local'
-const DEFAULT_CONTACT = 'https://github.com/moumenalaoui/globe'
+const DEFAULT_CONTACT = 'https://github.com/moumenalaoui/BLACKOUT'
 const MAX_ID_LEN = 48
 
 // Same charset as util::http::sanitize — a stray newline in an env var must

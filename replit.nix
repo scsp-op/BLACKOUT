@@ -3,11 +3,20 @@
 # Cargo.lock or package.json rather than added speculatively.
 { pkgs }: {
   deps = [
-    # backend/Cargo.toml declares edition = "2024" -> Rust >= 1.85 required.
-    # If this channel's rustc is older, drop these two, add pkgs.rustup, and
-    # install a pinned toolchain from the build command instead.
-    pkgs.rustc
-    pkgs.cargo
+    # rustup rather than pkgs.rustc/pkgs.cargo, because the channel's Rust is
+    # too old and the workspace hides that. backend/Cargo.toml declares
+    # edition = "2024", which needs >= 1.85; the `stable-24_05` channel ships
+    # Cargo 1.77.1 (24_11 is 1.82, still short). The workspace shell reports
+    # 1.88 from Replit's own image, so `rustc --version` there says nothing
+    # about what the deploy build will use — the observed failure was
+    # `feature edition2024 is required ... not stabilized in this version of
+    # Cargo (1.77.1)` after a clean build log.
+    #
+    # Pinning the toolchain in .replit's build command makes the deploy
+    # independent of both the Nix channel and the workspace image. Deliberately
+    # NOT a rust-toolchain.toml: that would also retarget local `cargo build`,
+    # and this is a Replit packaging concern, not a project-wide one.
+    pkgs.rustup
 
     # Vite 5 needs Node 18+.
     pkgs.nodejs_22
