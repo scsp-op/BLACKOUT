@@ -15,3 +15,8 @@ frontend/dist/
 *.db-wal
 *.db.snapshot
 *.db.restore
+# A seed snapshot dragged into the workspace to be uploaded to App Storage.
+# It belongs in the bucket, not in the publish snapshot — shipping it would
+# add ~19 MB to every deploy for a file the app never reads from disk.
+*.db.gz
+*.sqlite.gz
