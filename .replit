@@ -17,8 +17,8 @@
 # so DATABASE_PATH survives only via the App Storage snapshot in
 # backend/src/snapshot. See README "Deployment (Replit)".
 
-run = "backend/target/release/backend"
-build = "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked"
+run = "./bin/blackout"
+build = "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked && cd .. && mkdir -p bin && cp backend/target/release/backend bin/blackout"
 
 entrypoint = "backend/src/main.rs"
 
@@ -38,12 +38,17 @@ channel = "stable-24_05"
 # background on a timer. An Autoscale deployment scales to zero between
 # requests and would simply never run them.
 deploymentTarget = "vm"
+# The final `cp` is not tidiness. `backend/target/` is excluded from what the
+# build stage hands to the run stage (it reaches several GB), so the binary
+# has to be lifted out of it into a path that ships. `test -x` makes a failed
+# copy fail the BUILD, where the log is readable, instead of surfacing later
+# as a bare `no such file or directory` from the run stage.
 build = [
   "bash",
   "-c",
-  "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked",
+  "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked && cd .. && mkdir -p bin && cp backend/target/release/backend bin/blackout && test -x bin/blackout && test -f frontend/dist/index.html && echo 'artifacts staged: bin/blackout + frontend/dist'",
 ]
-run = ["backend/target/release/backend"]
+run = ["./bin/blackout"]
 
 [[ports]]
 # main.rs reads PORT and falls back to 3001 only for local runs. Leave PORT

@@ -1,10 +1,17 @@
-# Publishing snapshots the workspace file tree, so anything left here from a
-# local build is copied into the deployment. These three are rebuilt by the
-# build command and are large enough (backend/target reaches several GB) to
-# matter.
+# Publishing filters BOTH the source upload and what the build stage hands to
+# the run stage. That second half is the trap: excluding a build output here
+# does not mean "rebuild it in the deployment", it means the run stage never
+# sees it. Excluding `backend/target/` and `frontend/dist/` produced a build
+# that succeeded and then
+#   fork/exec backend/target/release/backend: no such file or directory
+#
+# So only things the running app genuinely never reads belong here.
+# `backend/target/` still does — it reaches several GB — but the build now
+# copies the one file that matters out of it into `bin/` (see .replit), and
+# `bin/` is deliberately not listed. `frontend/dist/` must ship: it IS
+# STATIC_DIR.
 backend/target/
 frontend/node_modules/
-frontend/dist/
 
 # Never publish a local database or a stale snapshot artefact. The deployment
 # restores its own from App Storage; a copy shipped in the tree would be

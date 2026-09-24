@@ -2,6 +2,13 @@
 target/
 **/*.rs.bk
 
+# Staged deploy artifacts. The Replit build copies the release binary here
+# because `backend/target/` is too large to hand to the run stage; see
+# .replit. Safe to gitignore: Replit filters deploys with .replitignore, not
+# .gitignore — which is the entire reason that second file exists — and the
+# deployment recreates bin/ during its own build.
+bin/
+
 # SQLite — never commit the db file, seed data lives in JSON.
 *.db
 *.sqlite
