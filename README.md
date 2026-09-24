@@ -1,15 +1,8 @@
 # BLACKOUT
 
 > **This is the Replit-targeted mirror** of
-> [moumenalaoui/BLACKOUT](https://github.com/moumenalaoui/BLACKOUT), which is deployed on Railway.
->
-> The packaging differs: this repo builds from `.replit` + `replit.nix` rather
-> than a Dockerfile, and persists its database to Replit App Storage rather
-> than a mounted volume. It also carries four changes to `backend/` that the
-> upstream does not yet have — the App Storage snapshot layer (Replit-specific),
-> plus the outbound-identity module, the satellite propagation cutoff and the
-> expanded blocking-timeline coverage (all three platform-neutral and worth
-> porting back). See [Deployment (Replit)](#deployment-replit).
+> [moumenalaoui/BLACKOUT](https://github.com/moumenalaoui/BLACKOUT), which is
+> deployed on Railway. See [Deployment (Replit)](#deployment-replit).
 
 BLACKOUT is a read-only web app for exploring internet freedom, censorship, and network disruption by country. It combines a React/Cesium globe frontend with a Rust/Axum API, a local SQLite store, background fetchers, and a small set of seeded reference data.
 
