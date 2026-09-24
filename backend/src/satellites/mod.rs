@@ -169,3 +169,91 @@ pub fn stale_cutoff(now: DateTime<Utc>) -> DateTime<Utc> {
         .unwrap_or(DEFAULT_STALE_AFTER_HOURS);
     now - chrono::Duration::milliseconds((hours * 3_600_000.0) as i64)
 }
+
+/// Default age past which an element set is too old to propagate at all.
+///
+/// Deliberately measured against `epoch`, not `last_updated`, and that
+/// distinction is the whole point. `stale_cutoff` above asks "when did *we*
+/// last accept a better record for this object" — our own bookkeeping. This
+/// asks "how old is the orbital data itself", which is upstream's.
+///
+/// The two come apart badly. SatNOGS republishes objects whose element sets
+/// are years old: in one observed catalog, 221 objects had an epoch more than
+/// 30 days old — the oldest from **February 1975** — and every single one was
+/// reported `fresh`, because we had accepted the record minutes earlier.
+///
+/// Thirty days is well past the point where SGP4 output means anything. Error
+/// grows by kilometres per day, and far enough out the propagator diverges
+/// outright: the observed failure is `eccentricity ... outside the range
+/// [0, 1[`, which is the secular drag term having driven the orbit to
+/// nonsense. Those errors are only the visible tip — an object a few months
+/// stale propagates *successfully* to a position that can be thousands of
+/// kilometres wrong, and is drawn on the globe with nothing to say it is
+/// fiction. Refusing to propagate is the honest answer; a wrong dot is worse
+/// than no dot.
+///
+/// This does not delete anything. The object stays in the catalog, is counted
+/// in `total`, and reappears the moment any provider supplies fresher
+/// elements for it — the additive-catalog invariant in
+/// `db::satellite_catalog` is untouched.
+pub const DEFAULT_MAX_PROPAGATION_AGE_DAYS: f64 = 30.0;
+
+/// `SATELLITE_MAX_PROPAGATION_AGE_DAYS` overrides the default.
+pub fn max_propagation_age_days() -> f64 {
+    std::env::var("SATELLITE_MAX_PROPAGATION_AGE_DAYS")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+        .filter(|d| d.is_finite() && *d > 0.0)
+        .unwrap_or(DEFAULT_MAX_PROPAGATION_AGE_DAYS)
+}
+
+/// Epoch before which an element set is not propagated at all.
+pub fn propagation_cutoff(now: DateTime<Utc>) -> DateTime<Utc> {
+    now - chrono::Duration::milliseconds((max_propagation_age_days() * 86_400_000.0) as i64)
+}
+
+#[cfg(test)]
+mod propagation_age_tests {
+    use super::*;
+
+    #[test]
+    fn the_default_cutoff_is_thirty_days_back() {
+        let now = Utc::now();
+        let elapsed = now - propagation_cutoff(now);
+        assert_eq!(elapsed.num_days(), 30);
+    }
+
+    /// The regression this cutoff exists for.
+    ///
+    /// SatNOGS republishes long-dead objects, so the catalog accepts a record
+    /// *now* whose orbital elements are years old. `stale_cutoff` looks at
+    /// `last_updated` and therefore calls it fresh — in one observed catalog
+    /// that was true of 221 objects, the oldest carrying elements from
+    /// February 1975. Only an `epoch`-based test catches them.
+    #[test]
+    fn a_just_accepted_object_with_ancient_elements_is_still_refused() {
+        let now = Utc::now();
+
+        // Exactly the observed shape: ONDOSAT-OWL-9, accepted 20 minutes ago,
+        // element-set epoch 642 days old.
+        let last_updated = now - chrono::Duration::minutes(20);
+        let epoch = now - chrono::Duration::days(642);
+
+        assert!(
+            last_updated >= stale_cutoff(now),
+            "last_updated-based staleness calls this fresh — that is the bug"
+        );
+        assert!(
+            epoch < propagation_cutoff(now),
+            "epoch-based cutoff must refuse to propagate it"
+        );
+    }
+
+    #[test]
+    fn a_normally_aged_element_set_is_still_propagated() {
+        let now = Utc::now();
+        // CelesTrak's own catalog routinely carries epochs a couple of weeks
+        // old; the cutoff must not reject ordinary data.
+        assert!(now - chrono::Duration::days(21) >= propagation_cutoff(now));
+    }
+}

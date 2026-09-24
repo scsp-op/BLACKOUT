@@ -51,7 +51,7 @@ pub async fn fetch_and_store(state: &AppState) -> Result<()> {
     let now = now_unix();
     let from = now - WINDOW_SECS;
 
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("ioda")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
 

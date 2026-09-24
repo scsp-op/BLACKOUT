@@ -28,6 +28,8 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { headers } from './identity.mjs'
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '../..')
 const COUNTRY_REFERENCE = resolve(REPO, 'backend/data/seed/country_reference.json')
@@ -92,11 +94,11 @@ function resolveCountryCode(name, byName) {
 const countryReference = JSON.parse(readFileSync(COUNTRY_REFERENCE, 'utf8'))
 const byName = new Map(countryReference.map((r) => [r.country_name, r.country_code]))
 
-const cableGeo = await fetch(CABLE_URL).then((r) => {
+const cableGeo = await fetch(CABLE_URL, { headers: headers('telegeography') }).then((r) => {
   if (!r.ok) throw new Error(`cable-geo.json fetch failed: ${r.status}`)
   return r.json()
 })
-const landingGeo = await fetch(LANDING_URL).then((r) => {
+const landingGeo = await fetch(LANDING_URL, { headers: headers('telegeography') }).then((r) => {
   if (!r.ok) throw new Error(`landing-point-geo.json fetch failed: ${r.status}`)
   return r.json()
 })

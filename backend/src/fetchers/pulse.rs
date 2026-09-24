@@ -94,7 +94,7 @@ pub async fn fetch_and_store(state: &AppState) -> Result<()> {
         }
     };
 
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("pulse")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
 

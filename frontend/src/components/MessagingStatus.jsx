@@ -36,12 +36,27 @@ export default function MessagingStatus({ countryCode }) {
     }
   }, [countryCode])
 
-  if (error || !rows) return null
+  // Three states that used to collapse into one blank space: still fetching,
+  // the request failed, and OONI genuinely has no messaging measurements for
+  // this country (47 of the drawable countries — Anguilla, Bhutan, Central
+  // African Republic and similar). Rendering nothing for all three is what
+  // makes a cold start look like a broken app.
+  const status = error ? 'ERROR' : rows === null ? 'LOADING\u2026' : null
 
-  const byApp = Object.fromEntries(rows.map((r) => [r.technology, r]))
+  const byApp = Object.fromEntries((rows ?? []).map((r) => [r.technology, r]))
   const shown = ORDER.map((key) => byApp[key]).filter((r) => r && r.measurement_count > 0)
+  const label = status ?? (shown.length === 0 ? 'NO OONI COVERAGE' : null)
 
-  if (shown.length === 0) return null
+  if (label) {
+    return (
+      <section>
+        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+          MESSAGING APPS
+        </div>
+        <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED }}>{label}</p>
+      </section>
+    )
+  }
 
   return (
     <section>

@@ -1,0 +1,79 @@
+# Replit app configuration. This is the whole build/run contract — Replit does
+# not read Dockerfiles, so everything the old three-stage image did is here or
+# in replit.nix.
+#
+# Layout the env vars below must match exactly:
+#   frontend/dist                      the built SPA        -> STATIC_DIR
+#   backend/data/seed                  committed seed files -> SEED_DIR
+#   backend/target/release/backend     the server binary    -> run
+#
+# Paths are relative to the REPO ROOT, which is the working directory of the
+# run command — not to /app, and not to backend/. The old image's absolute
+# /app/dist and /app/data/seed were facts about that image's layout and do not
+# apply here.
+#
+# The database does NOT live on this filesystem in any durable sense. Replit
+# rebuilds a published app's files from the workspace tree on every publish,
+# so DATABASE_PATH survives only via the App Storage snapshot in
+# backend/src/snapshot. See README "Deployment (Replit)".
+
+run = "backend/target/release/backend"
+build = "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked"
+
+entrypoint = "backend/src/main.rs"
+
+# Kept out of the file tree view; see also .replitignore, which keeps them out
+# of the publish snapshot.
+hidden = ["backend/target", "frontend/node_modules", "frontend/dist"]
+
+[nix]
+# backend/Cargo.toml declares edition = "2024", which needs Rust >= 1.85. If
+# this channel's rustc is older the build fails outright rather than
+# degrading — install a pinned toolchain with rustup in `build` instead.
+channel = "stable-24_05"
+
+[deployment]
+# Reserved VM, not Autoscale: the fetch loops (6h), the precision loops (1h),
+# the satellite refresh (2h) and the snapshot loop (3h) all run in the
+# background on a timer. An Autoscale deployment scales to zero between
+# requests and would simply never run them.
+deploymentTarget = "vm"
+build = [
+  "bash",
+  "-c",
+  "cd frontend && npm ci && npm run build && cd ../backend && cargo build --release --locked",
+]
+run = ["backend/target/release/backend"]
+
+[[ports]]
+# main.rs reads PORT and falls back to 3001 only for local runs. Leave PORT
+# unset here and let the platform inject it — then make localPort match
+# whatever the boot log's "Listening on 0.0.0.0:N" actually reports.
+localPort = 3001
+externalPort = 80
+
+[env]
+# Names this instance in every outbound User-Agent and in RIPEstat's
+# `sourceapp`, so this deployment and the personal one are distinguishable in
+# an upstream's logs. Not a secret, and not a rate-limit knob — see
+# backend/src/util/http.rs for what it is and is not for.
+DEPLOYMENT_ID = "scsp-replit"
+STATIC_DIR = "frontend/dist"
+# A wrong SEED_DIR is fatal, not degraded: seed::load_all's error propagates
+# through init_schema into main and the process exits, so a typo here is a
+# crash loop.
+SEED_DIR = "backend/data/seed"
+DATABASE_PATH = "/home/runner/data/mena_ai.db"
+# Setting this is what turns the App Storage snapshot on. Unset it and the
+# app still runs — it just loses every byte of fetched data on each publish.
+SNAPSHOT_KEY = "mena_ai.db.gz"
+# Every fetcher talks HTTPS. Without a trust store they all fail at runtime
+# while the process itself looks perfectly healthy, which is the reason the
+# old image installed ca-certificates and replit.nix installs pkgs.cacert.
+SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
+
+# App Storage. The sidecar resolves the default bucket on its own once App
+# Storage is enabled for this app, so this normally needs nothing. Uncomment
+# and fill in only if the sidecar reports no default bucket.
+# [objectStorage]
+# defaultBucketID = "replit-objstore-..."

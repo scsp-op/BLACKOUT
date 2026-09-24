@@ -66,15 +66,27 @@ pub async fn list_satellites(
         .read()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let now = Utc::now();
-    // Computed once per request, not once per satellite: the threshold is the
-    // same for all ~16k objects.
+    // Computed once per request, not once per satellite: the thresholds are
+    // the same for all ~16k objects.
     let stale_before = crate::satellites::stale_cutoff(now);
+    let propagatable_from = crate::satellites::propagation_cutoff(now);
 
     let mut satellites = Vec::new();
     for sat in guard.objects.iter() {
         if let Some(wanted) = &wanted
             && !wanted.iter().any(|c| c == &sat.category)
         {
+            continue;
+        }
+        // Elements too old to mean anything are skipped before propagation
+        // rather than after. SGP4 diverges outright on the worst of them
+        // (`eccentricity outside [0, 1[`), which used to log one line per
+        // object per request — ~200 lines every 7 seconds per open browser,
+        // since this endpoint is polled. The quieter half of the same problem
+        // matters more: an object a few months stale propagates without
+        // error to a position that can be thousands of kilometres wrong.
+        // See `satellites::DEFAULT_MAX_PROPAGATION_AGE_DAYS`.
+        if sat.epoch < propagatable_from {
             continue;
         }
         match geodetic::propagate_geodetic(&sat.elements, &sat.constants, now) {
@@ -100,18 +112,28 @@ pub async fn list_satellites(
     let category_counts = tally_categories(guard.objects.iter().map(|s| s.category.as_str()));
     // Catalog-wide, not filtered — same reasoning as `category_counts`: the
     // frontend needs to state overall freshness regardless of the selection.
+    // A three-way partition rather than fresh/stale, because an object whose
+    // elements are too old to propagate was previously counted as *fresh*
+    // (we had just accepted the record), which is the most misleading answer
+    // available.
+    let unpropagatable_count = guard
+        .objects
+        .iter()
+        .filter(|s| s.epoch < propagatable_from)
+        .count();
     let stale_count = guard
         .objects
         .iter()
-        .filter(|s| s.last_updated < stale_before)
+        .filter(|s| s.epoch >= propagatable_from && s.last_updated < stale_before)
         .count();
 
     Ok(Json(SatellitesResponse {
         generated_at: now,
         catalog_updated_at: guard.catalog_updated_at,
         total,
-        fresh_count: total - stale_count,
+        fresh_count: total - stale_count - unpropagatable_count,
         stale_count,
+        unpropagatable_count,
         category_counts,
         satellites,
     }))
@@ -130,26 +152,33 @@ pub async fn satellites_status(
 ) -> Result<Json<SatelliteStatus>, StatusCode> {
     let now = Utc::now();
     let stale_before = crate::satellites::stale_cutoff(now);
+    let propagatable_from = crate::satellites::propagation_cutoff(now);
 
-    let (satellite_count, stale_satellite_count, current_data_sources) = {
+    let (satellite_count, stale_satellite_count, unpropagatable_satellite_count, current_data_sources) = {
         let guard = catalog
             .read()
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let unpropagatable = guard
+            .objects
+            .iter()
+            .filter(|s| s.epoch < propagatable_from)
+            .count();
         let stale = guard
             .objects
             .iter()
-            .filter(|s| s.last_updated < stale_before)
+            .filter(|s| s.epoch >= propagatable_from && s.last_updated < stale_before)
             .count();
         let sources = tally_categories(guard.objects.iter().map(|s| s.source.as_str()));
-        (guard.objects.len(), stale, sources)
+        (guard.objects.len(), stale, unpropagatable, sources)
     };
 
     let conn = state.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let last_successful_refresh = store::get_state_ts(&conn, store::LAST_SUCCESSFUL_REFRESH);
     let body = SatelliteStatus {
         satellite_count,
-        fresh_satellite_count: satellite_count - stale_satellite_count,
+        fresh_satellite_count: satellite_count - stale_satellite_count - unpropagatable_satellite_count,
         stale_satellite_count,
+        unpropagatable_satellite_count,
         last_successful_refresh,
         catalog_age_seconds: last_successful_refresh.map(|t| (now - t).num_seconds()),
         last_celestrak_success: store::get_state_ts(&conn, store::LAST_CELESTRAK_SUCCESS),
@@ -158,6 +187,7 @@ pub async fn satellites_status(
         current_data_sources,
         persisted_count: store::count(&conn).unwrap_or(0),
         stale_after_hours: (now - stale_before).num_seconds() as f64 / 3600.0,
+        max_propagation_age_days: crate::satellites::max_propagation_age_days(),
     };
     Ok(Json(body))
 }
@@ -177,6 +207,15 @@ pub async fn satellite_orbit(
 
     let now = Utc::now();
     let stale_before = crate::satellites::stale_cutoff(now);
+
+    // Same cutoff as `list_satellites`, for the same reason: a full orbit
+    // path sampled from a years-old element set is 180 points of fiction.
+    // 422 rather than 404 — the object genuinely exists in the catalog, it
+    // just cannot be propagated.
+    if sat.epoch < crate::satellites::propagation_cutoff(now) {
+        return Err(StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
     let period_minutes = orbit::period_minutes(sat.elements.mean_motion);
     let points = orbit::sample_orbit(
         &sat.elements,

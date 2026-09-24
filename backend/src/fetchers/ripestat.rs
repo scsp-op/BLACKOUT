@@ -62,7 +62,7 @@ struct StatEntry {
 /// data API is open.
 pub async fn fetch_and_store(state: &AppState) -> Result<()> {
     let codes = fetch_codes(state)?;
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("ripestat")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
 
@@ -100,10 +100,9 @@ async fn fetch_country_stats(
 ) -> Result<Vec<StatEntry>> {
     // RIPEstat's own documented convention for high-volume/registered
     // callers — identifies this tool in their logs, not an auth credential.
-    let sourceapp = std::env::var("RIPESTAT_SOURCEAPP")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| "blackout-globe-tool".to_string());
+    // Derived from DEPLOYMENT_ID unless overridden, so one variable is enough
+    // to tell two deployments apart everywhere they are visible.
+    let sourceapp = crate::util::http::ripestat_sourceapp();
 
     let resp = client
         .get(ENDPOINT)
@@ -112,7 +111,7 @@ async fn fetch_country_stats(
             ("starttime", starttime),
             ("endtime", endtime),
             ("resolution", "1d"),
-            ("sourceapp", sourceapp.as_str()),
+            ("sourceapp", sourceapp),
         ])
         .send()
         .await?

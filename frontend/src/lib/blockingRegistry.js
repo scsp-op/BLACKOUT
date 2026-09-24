@@ -76,7 +76,20 @@ export const BLOCKING_STATUS_LABEL = {
 // a timeline exists for any country that has measurements. A chart therefore
 // renders whenever there are rows and hides itself when there aren't, rather
 // than being gated on a hardcoded five.
-const TIMELINE_TECHNOLOGIES = ['torproject', 'signal', 'i2p', 'psiphon', 'torsf', 'openai.com']
+const TIMELINE_TECHNOLOGIES = [
+  'tor',
+  'torproject',
+  'signal',
+  'i2p',
+  'psiphon',
+  'torsf',
+  'openai.com',
+  'claude.ai',
+  'deepseek',
+  'huggingface',
+  'grapheneos',
+  'tails',
+]
 
 export function hasTimeline(_countryCode, technology) {
   return TIMELINE_TECHNOLOGIES.includes(technology)

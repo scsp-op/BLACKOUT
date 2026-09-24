@@ -78,7 +78,7 @@ pub async fn fetch_and_store(state: &AppState) -> Result<()> {
     };
 
     let codes = fetch_codes(state)?;
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("cloudflare-radar")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
 

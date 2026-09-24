@@ -19,6 +19,8 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { headers } from './identity.mjs'
 import * as topojson from '../../frontend/node_modules/topojson-client/dist/topojson-client.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -141,7 +143,7 @@ function geometryStats(geometry) {
 
 // ── Build ──────────────────────────────────────────────────────────────────
 
-const iso = await fetch(ISO_URL).then((r) => {
+const iso = await fetch(ISO_URL, { headers: headers('country-reference') }).then((r) => {
   if (!r.ok) throw new Error(`ISO 3166 fetch failed: ${r.status}`)
   return r.json()
 })

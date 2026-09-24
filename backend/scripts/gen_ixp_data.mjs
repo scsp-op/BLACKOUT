@@ -41,6 +41,8 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { headers } from './identity.mjs'
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '../..')
 const COUNTRY_REFERENCE = resolve(REPO, 'backend/data/seed/country_reference.json')
@@ -52,12 +54,13 @@ const countryReference = JSON.parse(readFileSync(COUNTRY_REFERENCE, 'utf8'))
 const knownCodes = new Set(countryReference.map((r) => r.country_code))
 
 const apiKey = process.env.PEERINGDB_API_KEY?.trim()
-const headers = apiKey ? { Authorization: `Api-Key ${apiKey}` } : {}
+const requestHeaders = headers('peeringdb', apiKey ? { Authorization: `Api-Key ${apiKey}` } : {})
 if (!apiKey) {
   console.warn('PEERINGDB_API_KEY not set — falling back to the unauthenticated (heavily throttled) limit.')
 }
+console.log(`Identifying as ${requestHeaders['User-Agent']}`)
 
-const body = await fetch(IX_URL, { headers }).then((r) => {
+const body = await fetch(IX_URL, { headers: requestHeaders }).then((r) => {
   if (!r.ok) throw new Error(`PeeringDB /api/ix fetch failed: ${r.status} — ${r.statusText}`)
   return r.json()
 })

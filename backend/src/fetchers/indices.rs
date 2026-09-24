@@ -63,9 +63,8 @@ pub async fn fetch_and_store(state: &AppState) -> Result<()> {
         crate::db::countries::alpha3_to_code(&conn)?
     };
 
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("owid")
         .timeout(REQUEST_TIMEOUT)
-        .user_agent("globe-censorship-tracker/0.1")
         .build()?;
 
     // Local read, so a failure here shouldn't cost us the OWID scores — the

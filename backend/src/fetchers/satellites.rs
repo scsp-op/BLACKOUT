@@ -29,22 +29,6 @@ use crate::satellites::{
 use serde::Deserialize;
 use std::time::Duration;
 
-// A descriptive UA rather than reqwest's bare default. CelesTrak and SatNOGS
-// are both free services a single maintainer or small nonprofit runs for the
-// community — identifying this client honestly costs nothing. (Note what
-// this deliberately is *not*: some reference implementations of this same
-// feature spoof randomized browser user-agents and fake residential
-// `X-Forwarded-For` IPs to look like distinct real users rather than one
-// client — that's misrepresentation to dodge a provider's own rate limiting,
-// not identification, and it wouldn't even address the failure mode we've
-// actually seen, which is a connection that never completes at the TCP
-// level, before any header is sent.)
-const CLIENT_USER_AGENT: &str = concat!(
-    "blackout-satellite-tracker/",
-    env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/moumenalaoui/globe)"
-);
-
 // CelesTrak's modern GP data endpoint. `FORMAT` must be given explicitly —
 // CSV became the default response format (2026-05-09) when it's omitted.
 // Query params must be uppercase.
@@ -114,8 +98,8 @@ const CELESTRAK_GIVE_UP_AFTER: usize = 3;
 /// asking again; once any cycle produces records the loop reverts to the
 /// configured interval.
 ///
-/// This, plus the persistent volume, is deliberately the whole answer to a
-/// cold start. Shipping a committed known-good catalog snapshot with the image
+/// This, plus the App Storage snapshot, is deliberately the whole answer to
+/// a cold start. Shipping a committed known-good catalog snapshot with the image
 /// was considered and rejected: TLE accuracy decays (SGP4 position error grows
 /// by kilometres per day, and a months-old element set puts a LEO satellite
 /// hundreds of kilometres from where it is drawn), so a snapshot old enough to
@@ -447,9 +431,13 @@ fn load_into_catalog(catalog: &SatelliteCatalog, state: &crate::AppState) -> usi
 /// happened. Never returns an error — a refresh that achieves nothing is a
 /// reportable state, not an exception, and the catalog is intact either way.
 async fn refresh_cycle(catalog: &SatelliteCatalog, state: &crate::AppState) -> RefreshStatus {
-    let client = match reqwest::Client::builder()
+    // CelesTrak and SatNOGS are both free services run by a single maintainer
+    // or a small nonprofit, and this is the one fetcher that sweeps a dozen
+    // endpoints per cycle — identifying honestly matters most here. The
+    // identity itself lives in util::http, which explains what it is and is
+    // not for.
+    let client = match crate::util::http::client("satellites")
         .timeout(REQUEST_TIMEOUT)
-        .user_agent(CLIENT_USER_AGENT)
         .build()
     {
         Ok(c) => c,
@@ -774,7 +762,7 @@ pub async fn run_catalog_refresh_loop(catalog: SatelliteCatalog, state: crate::A
     match (restored, age) {
         (0, _) => println!(
             "satellites: no persistent catalog found — this is either a first deployment or \
-             DATABASE_PATH is not on persistent storage (see README: Railway volume)"
+             the App Storage snapshot did not restore (see README: Deployment (Replit))"
         ),
         (n, Some(age)) => println!(
             "satellites: loaded {n} satellites from the persistent catalog; catalog age {}",

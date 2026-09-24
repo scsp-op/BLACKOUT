@@ -33,11 +33,20 @@ pub struct SatellitesResponse {
     /// Total objects in the catalog, independent of `categories` filtering —
     /// lets the frontend show a live "All Satellites" count.
     pub total: usize,
-    /// How many of `total` carry orbital data refreshed within the staleness
-    /// window, and how many do not. Both are catalog-wide, independent of
-    /// `categories`. `fresh + stale == total`.
+    /// How the catalog partitions by data age. All three are catalog-wide,
+    /// independent of `categories`, and `fresh + stale + unpropagatable ==
+    /// total`.
+    ///
+    /// `fresh`/`stale` split on `last_updated` — how recently we accepted a
+    /// better record. `unpropagatable` splits on `epoch`, the element set's
+    /// own age, and those objects are excluded from `satellites` entirely
+    /// because SGP4 cannot produce a meaningful position from them (see
+    /// `satellites::DEFAULT_MAX_PROPAGATION_AGE_DAYS`). They are deliberately
+    /// counted out of `fresh` rather than left in it: an object carrying
+    /// 1975 orbital data is not fresh in any sense a caller means.
     pub fresh_count: usize,
     pub stale_count: usize,
+    pub unpropagatable_count: usize,
     /// Object count per category, likewise independent of `categories`
     /// filtering, so every legend row can show a live count regardless of
     /// which one is currently selected/fetched.
@@ -57,6 +66,11 @@ pub struct SatelliteStatus {
     pub satellite_count: usize,
     pub fresh_satellite_count: usize,
     pub stale_satellite_count: usize,
+    /// Objects whose element-set epoch is too old to propagate, so they are
+    /// in the catalog but never appear in `/api/satellites`. A number that
+    /// climbs here while `satellite_count` holds steady is SatNOGS
+    /// republishing long-dead objects, not a refresh problem.
+    pub unpropagatable_satellite_count: usize,
     /// Last refresh that merged at least one record, and how long ago that is.
     pub last_successful_refresh: Option<DateTime<Utc>>,
     pub catalog_age_seconds: Option<i64>,
@@ -75,6 +89,7 @@ pub struct SatelliteStatus {
     /// `satellite_count` means records were rejected at load, not lost.
     pub persisted_count: usize,
     pub stale_after_hours: f64,
+    pub max_propagation_age_days: f64,
 }
 
 /// One point on a sampled orbit path.

@@ -14,6 +14,12 @@ anyhow = "1"
 reqwest = { version = "0.12", features = ["json"] }
 csv = "1"
 dotenvy = "0.15"
+# Gzip for the App Storage snapshot (see src/snapshot). Default features mean
+# the pure-Rust miniz_oxide backend, so this adds no system library to link
+# and nothing to install in replit.nix. A vacuumed database compresses to
+# roughly a quarter of its size, which is the difference between a few hundred
+# MB and tens of GB of App Storage bandwidth per month.
+flate2 = "1"
 sgp4 = "2.4"
 # Pulled in transitively by sgp4 (for TLE/OMM epoch handling); declared
 # directly here too since a transitive dependency isn't `use`-able on its own,

@@ -205,10 +205,19 @@ fn report_cycle(state: &AppState) {
 /// every external fetch finishes.
 pub async fn run_fetchers(state: &AppState) {
     tokio::join!(
+        // One budget covers all three OONI phases in sequence (signals,
+        // technology blocks, timelines). The timeline phase grew from six
+        // sweeps to ten — every tracked technology now gets one — and those
+        // are the widest queries in the codebase: 2-D aggregations over every
+        // country since 2024-01-01, up to ~18 MB each. Measured additions
+        // were ~30s of network plus pacing, so this goes to 420 rather than
+        // sitting a few seconds under the old ceiling. A timeout here is not
+        // destructive (each technology's rows are written as it completes,
+        // and the sweep is idempotent) but it does mark the fetcher failed.
         run_with_timeout(
             state,
             "ooni",
-            300,
+            420,
             crate::fetchers::ooni::fetch_and_store(state)
         ),
         run_with_timeout(

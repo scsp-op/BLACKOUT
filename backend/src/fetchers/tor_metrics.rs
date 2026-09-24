@@ -35,7 +35,6 @@ fn end_date() -> String {
     crate::util::date::today_iso()
 }
 
-const USER_AGENT: &str = "Censorship Tracker";
 
 // A small, polite gap between the two requests (relay + bridge).
 const REQUEST_PACING: Duration = Duration::from_millis(300);
@@ -103,15 +102,8 @@ struct TorRow {
 /// published for a given day, there's no basis for a HIGH_BLOCKING/LOW call, so
 /// that day is marked INCONCLUSIVE rather than guessed at.
 pub async fn fetch_and_store(state: &AppState) -> Result<()> {
-    let mut default_headers = reqwest::header::HeaderMap::new();
-    default_headers.insert(
-        reqwest::header::USER_AGENT,
-        reqwest::header::HeaderValue::from_static(USER_AGENT),
-    );
-
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("tor-metrics")
         .timeout(REQUEST_TIMEOUT)
-        .default_headers(default_headers)
         .build()?;
 
     // Recognised ISO codes, read once. The relay CSV emits non-country rows —

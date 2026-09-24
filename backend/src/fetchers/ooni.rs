@@ -52,18 +52,42 @@ const TARGET_URLS: [&str; 4] = [
 
 const AGGREGATION_ENDPOINT: &str = "https://api.ooni.io/api/v1/aggregation";
 
-// Technologies to backfill a daily timeline (sparkline) for. Every tracked
-// circumvention tool plus the AI-access flagship. Each is fetched for ALL
-// countries in a single 2-D aggregation request (day x country), so — unlike
-// the old hardcoded (country, technology) TIMELINE_TARGETS table — this list is
-// technology-only and the country dimension comes from the response.
+// Technologies to backfill a daily timeline (sparkline) for. Each is fetched
+// for ALL countries in a single 2-D aggregation request (day x country), so —
+// unlike the old hardcoded (country, technology) TIMELINE_TARGETS table — this
+// list is technology-only and the country dimension comes from the response.
+//
+// This is now every technology in REGISTRY except the messaging apps, which
+// have their own sidebar widget and no per-row sparkline to fill. It used to
+// be six: every circumvention tool except `tor` itself, plus `openai.com`
+// alone out of the four AI-access entries. That split had no reason behind it
+// — `claude.ai`, `deepseek` and `huggingface` are `web_connectivity` against
+// a URL exactly like `openai.com`, and `tor` is a dedicated nettest exactly
+// like `psiphon` and `torsf` — so the sidebar showed a chart under some rows
+// and nothing under their identical neighbours.
+//
+// Cost of the six additions, measured against the live API rather than
+// guessed: tor 9.8s (17.9 MB, the largest response in the codebase),
+// deepseek 8.4s (6.0 MB), claude.ai 8.0s (6.2 MB), tails 4.7s (258 kB),
+// grapheneos 3.4s (213 kB), huggingface 3.4s (77 kB — OONI barely covers
+// it). ~38s of network plus pacing, which is why the `ooni` budget in
+// db/mod.rs went up alongside this.
 const TIMELINE_TECHS: &[&str] = &[
+    // Circumvention
+    "tor",
     "torproject",
     "signal",
     "i2p",
     "psiphon",
     "torsf",
+    // AI access
     "openai.com",
+    "claude.ai",
+    "deepseek",
+    "huggingface",
+    // Privacy OS
+    "grapheneos",
+    "tails",
 ];
 
 // ── Aggregation response ───────────────────────────────────────────────────
@@ -372,7 +396,7 @@ struct SignalRow {
 /// One aggregation per AI-access URL, grouped by country, recording a
 /// reachability signal per country in `adoption_signals`.
 async fn fetch_and_store_signals(state: &AppState, known: &HashSet<String>) -> Result<()> {
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("ooni")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
     let since = days_ago_iso(POINT_IN_TIME_WINDOW_DAYS);
@@ -529,7 +553,7 @@ async fn fetch_and_store_technology_blocks(
     state: &AppState,
     known: &HashSet<String>,
 ) -> Result<()> {
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("ooni")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
     let since = days_ago_iso(POINT_IN_TIME_WINDOW_DAYS);
@@ -674,7 +698,7 @@ struct CatRow {
 /// content are censored" view (NEWS, HUMR, LGBT, POLR, ...) for the whole globe
 /// in one request.
 async fn fetch_and_store_categories(state: &AppState, known: &HashSet<String>) -> Result<()> {
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("ooni")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
 
@@ -829,7 +853,7 @@ struct TimelineRow {
 /// hardcoded (country, technology) sweep, so a country gets a chart the moment
 /// it has measurements rather than only if it was on a hand-maintained list.
 async fn fetch_and_store_timeline(state: &AppState, known: &HashSet<String>) -> Result<()> {
-    let client = reqwest::Client::builder()
+    let client = crate::util::http::client("ooni")
         .timeout(REQUEST_TIMEOUT)
         .build()?;
     let mut failures = Vec::new();
@@ -933,3 +957,42 @@ fn insert_timeline_rows(state: &AppState, technology: &str, rows: &[TimelineRow]
 
 // Date helpers live in crate::util::date — see the import at the top of this
 // file.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `fetch_and_store_timeline` looks each key up in `REGISTRY` and
+    /// silently `continue`s when it is absent, so a typo in `TIMELINE_TECHS`
+    /// does not fail, log, or even slow anything down — the sparkline for
+    /// that technology just never exists. Both lists are hand-maintained and
+    /// have to agree; this is the only thing that makes them.
+    #[test]
+    fn every_timeline_technology_exists_in_the_registry() {
+        for key in TIMELINE_TECHS {
+            assert!(
+                REGISTRY.iter().any(|t| t.key == *key),
+                "TIMELINE_TECHS names `{key}`, which is not in REGISTRY — its \
+                 timeline would be skipped without any error"
+            );
+        }
+    }
+
+    /// Messaging apps are rendered by their own sidebar widget, which has no
+    /// per-row sparkline, so fetching a timeline for them would be several
+    /// of the most expensive requests in the codebase for data nothing reads.
+    #[test]
+    fn timelines_cover_every_non_messaging_technology() {
+        let missing: Vec<&str> = REGISTRY
+            .iter()
+            .filter(|t| !matches!(t.category, TechCategory::Messaging))
+            .map(|t| t.key)
+            .filter(|key| !TIMELINE_TECHS.contains(key))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "these technologies render a blocking row with no sparkline, while \
+             their identical neighbours have one: {missing:?}"
+        );
+    }
+}

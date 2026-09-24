@@ -15,6 +15,7 @@ mod engine;
 mod fetchers;
 mod models;
 mod satellites;
+mod snapshot;
 mod util;
 
 pub type AppState = Arc<Mutex<Connection>>;
@@ -35,6 +36,26 @@ async fn main() -> anyhow::Result<()> {
         .filter(|v| !v.is_empty())
         .unwrap_or_else(|| "mena_ai.db".to_string());
 
+    // The directory holding the database is not guaranteed to exist:
+    // DATABASE_PATH points somewhere on a filesystem Replit rebuilds from
+    // scratch on every publish. `Connection::open` does not create parent
+    // directories, so without this it fails with "unable to open database
+    // file" before the snapshot restore has anywhere to put anything.
+    if let Some(parent) = std::path::Path::new(&db_path).parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            anyhow::anyhow!("could not create `{}` for the database: {e}", parent.display())
+        })?;
+    }
+
+    // Pulls the database back from Replit App Storage when the filesystem has
+    // been rebuilt under us. Must run before the two lines below: `exists()`
+    // has to see the restored file, and `Connection::open` would create an
+    // empty one. `None` means no snapshots this run — see the module docs for
+    // the three reasons, only one of which is a problem.
+    let snapshotter = snapshot::restore_if_absent(&db_path).await;
+
     // Captured *before* `Connection::open`, which creates the file if absent —
     // afterwards there is no way to tell a restored database from a brand-new
     // one, and that distinction is the whole point of `report_persistence`.
@@ -46,6 +67,7 @@ async fn main() -> anyhow::Result<()> {
     db::init_schema(&conn)?;
     println!("DB initialized and seeded.");
     warn_missing_optional_tokens();
+    util::http::report_identity();
 
     let state: AppState = Arc::new(Mutex::new(conn));
     report_persistence(&state, &db_path, db_existed);
@@ -99,6 +121,25 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         db::run_precision_fetcher_loop(precision_state).await;
     });
+
+    // Durability, on its own cadence again — unrelated to any fetcher's, since
+    // this is about surviving a redeploy rather than about any data source.
+    // Absent entirely when snapshots are off, so local runs spawn nothing and
+    // a failed restore cannot lead to an upload.
+    if let Some(snapshotter) = snapshotter {
+        let interval_state = state.clone();
+        let interval_snapshotter = snapshotter.clone();
+        tokio::spawn(async move {
+            interval_snapshotter.run_loop(interval_state).await;
+        });
+
+        // The interval above only bounds what an unplanned crash costs; this
+        // is what makes an ordinary redeploy lossless.
+        let shutdown_state = state.clone();
+        tokio::spawn(async move {
+            snapshotter.run_shutdown_hook(shutdown_state).await;
+        });
+    }
 
     // Public and read-only. Every route below is a GET; `POST /api/evaluate`
     // is deliberately NOT mounted — it was the one write path (it persists
@@ -184,11 +225,11 @@ async fn main() -> anyhow::Result<()> {
 /// Says plainly, at boot, whether the satellite catalog survived.
 ///
 /// This exists because the single most damaging failure mode in this
-/// deployment is silent: if `DATABASE_PATH` is not actually on a persistent
-/// volume, every redeploy starts from an empty database and the satellite
-/// catalog has to be rebuilt from scratch — which, during a CelesTrak outage,
-/// means it comes back as a fraction of its real size. The old log line
-/// ("DB at /data/mena_ai.db") looked identical either way.
+/// deployment is silent: if the database was not restored, every redeploy
+/// starts from an empty one and the satellite catalog has to be rebuilt from
+/// scratch — which, during a CelesTrak outage, means it comes back as a
+/// fraction of its real size. The plain "DB at <path>" line above looks
+/// identical either way.
 ///
 /// The boot counter in `satellite_refresh_state` is what makes the two cases
 /// distinguishable: it can only be absent on a database no process has ever
@@ -221,12 +262,22 @@ fn report_persistence(state: &AppState, db_path: &str, db_existed: bool) {
         "WARNING: that is expected on a first-ever deployment, and a problem on any other — \
          it means the previous deployment's data is gone."
     );
-    eprintln!(
-        "WARNING: on Railway, a volume must be mounted at the directory holding DATABASE_PATH \
-         (/data by default). Volumes cannot be declared in railway.json; create it in the \
-         service's Settings -> Volumes. Without one, /data is part of the container filesystem \
-         and every redeploy starts empty."
-    );
+    // Only worth saying where it can actually be acted on. A local `cargo run`
+    // legitimately has no snapshot and would just be told off for it.
+    if std::env::var("SNAPSHOT_KEY").is_ok_and(|v| !v.trim().is_empty()) {
+        eprintln!(
+            "WARNING: Replit rebuilds a published app's filesystem on every publish, so \
+             DATABASE_PATH only survives via the App Storage snapshot. Check the `snapshot:` \
+             lines above — the restore must not have reported a WARNING. See README \
+             \"Deployment (Replit)\"."
+        );
+    } else {
+        eprintln!(
+            "WARNING: SNAPSHOT_KEY is not set, so nothing is persisting this database. That is \
+             correct for a local run and wrong for a deployment — see README \
+             \"Deployment (Replit)\"."
+        );
+    }
 }
 
 /// `ServeDir` for the built SPA, falling back to `index.html` so client-side

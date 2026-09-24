@@ -71,6 +71,24 @@ function isMeaningful(row, timelineRows) {
   return hasPointSignal || hasTimelineSignal
 }
 
+// "Still fetching" and "there is genuinely nothing here" used to render
+// identically — as nothing at all — so a country with complete data looked
+// broken for the whole of a cold start. That window is minutes, not
+// milliseconds: OONI's timeline phase is the slowest thing in the app (ten
+// 2-D aggregations over every country since 2024-01-01, up to ~18 MB each),
+// and until it lands every blocking section is empty.
+//
+// This is the same distinction the pulse fetcher already insists on in its
+// own boot warning — an empty panel has to say whether it is empty because
+// the data has not arrived or because the source does not cover this country.
+function SectionState({ loading, emptyLabel }) {
+  return (
+    <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED }}>
+      {loading ? 'LOADING\u2026' : emptyLabel}
+    </p>
+  )
+}
+
 function BlockingGroupList({ groups, blockingByTech, timelineByTech, countryCode, showGroupLabel = true }) {
   return (
     <>
@@ -141,11 +159,14 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
 
 export default function CountrySidebar({ country, layer, starlinkStatus, ixpStats, onClose }) {
   const [blockingRows, setBlockingRows] = useState([])
+  const [blockingLoading, setBlockingLoading] = useState(true)
   const [timelineByTech, setTimelineByTech] = useState({})
+  const [timelineLoading, setTimelineLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     setBlockingRows([])
+    setBlockingLoading(true)
 
     fetch(`/api/blocking?country=${country.country_code}`)
       .then((response) => (response.ok ? response.json() : []))
@@ -154,6 +175,9 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
       })
       .catch(() => {
         if (!cancelled) setBlockingRows([])
+      })
+      .finally(() => {
+        if (!cancelled) setBlockingLoading(false)
       })
 
     return () => {
@@ -164,6 +188,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   useEffect(() => {
     let cancelled = false
     setTimelineByTech({})
+    setTimelineLoading(true)
 
     const promoted = ALL_TECHNOLOGIES.filter((tech) => hasTimeline(country.country_code, tech))
     Promise.all(
@@ -174,7 +199,10 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
           .catch(() => [tech, []]),
       ),
     ).then((entries) => {
-      if (!cancelled) setTimelineByTech(Object.fromEntries(entries))
+      if (!cancelled) {
+        setTimelineByTech(Object.fromEntries(entries))
+        setTimelineLoading(false)
+      }
     })
 
     return () => {
@@ -198,6 +226,18 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   const circumventionGroups = visibleGroups.filter(
     ({ group }) => group === 'CIRCUMVENTION' || group === 'PRIVACY_OS',
   )
+
+  // A row is only considered settled once BOTH fetches are in: `isMeaningful`
+  // promotes a technology on either a point-in-time classification or a
+  // timeline, so a group that looks empty with only one of the two loaded may
+  // still fill in.
+  const blockingPending = blockingLoading || timelineLoading
+  // Which sections the current layer filter admits at all. Without this, a
+  // CIRCUMVENTION-only view would report "no coverage" for AI access, when in
+  // fact it was simply not asked for.
+  const showAiAccess = groupsForLayer.includes('AI_ACCESS')
+  const showCircumvention =
+    groupsForLayer.includes('CIRCUMVENTION') || groupsForLayer.includes('PRIVACY_OS')
 
   return (
     <div
@@ -240,19 +280,23 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
           <StarlinkBadge entry={starlinkStatus} />
         </ThemeSection>
 
-        {aiAccessGroups.length > 0 && (
+        {showAiAccess && (
           <ThemeSection title="AI ACCESS">
             <div>
               <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
               </div>
-              <BlockingGroupList
-                groups={aiAccessGroups}
-                blockingByTech={blockingByTech}
-                timelineByTech={timelineByTech}
-                countryCode={country.country_code}
-                showGroupLabel={false}
-              />
+              {aiAccessGroups.length > 0 ? (
+                <BlockingGroupList
+                  groups={aiAccessGroups}
+                  blockingByTech={blockingByTech}
+                  timelineByTech={timelineByTech}
+                  countryCode={country.country_code}
+                  showGroupLabel={false}
+                />
+              ) : (
+                <SectionState loading={blockingPending} emptyLabel="NO OONI COVERAGE" />
+              )}
             </div>
           </ThemeSection>
         )}
@@ -266,17 +310,21 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
         </ThemeSection>
 
         <ThemeSection title="CIRCUMVENTION">
-          {circumventionGroups.length > 0 && (
+          {showCircumvention && (
             <div>
               <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
               </div>
-              <BlockingGroupList
-                groups={circumventionGroups}
-                blockingByTech={blockingByTech}
-                timelineByTech={timelineByTech}
-                countryCode={country.country_code}
-              />
+              {circumventionGroups.length > 0 ? (
+                <BlockingGroupList
+                  groups={circumventionGroups}
+                  blockingByTech={blockingByTech}
+                  timelineByTech={timelineByTech}
+                  countryCode={country.country_code}
+                />
+              ) : (
+                <SectionState loading={blockingPending} emptyLabel="NO OONI COVERAGE" />
+              )}
             </div>
           )}
 

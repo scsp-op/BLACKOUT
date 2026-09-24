@@ -414,7 +414,7 @@ pub fn group_high_water(conn: &Connection) -> HashMap<String, usize> {
 /// Increments and returns the boot counter. A returned `1` means this process
 /// opened a database that had never been booted against before — either a
 /// genuine first deployment, or (the case worth shouting about) a container
-/// whose persistent volume is not actually mounted.
+/// whose App Storage snapshot did not restore.
 pub fn record_boot(state: &AppState) -> Result<u64> {
     let conn = state
         .lock()

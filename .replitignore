@@ -1,0 +1,17 @@
+# Publishing snapshots the workspace file tree, so anything left here from a
+# local build is copied into the deployment. These three are rebuilt by the
+# build command and are large enough (backend/target reaches several GB) to
+# matter.
+backend/target/
+frontend/node_modules/
+frontend/dist/
+
+# Never publish a local database or a stale snapshot artefact. The deployment
+# restores its own from App Storage; a copy shipped in the tree would be
+# picked up by restore_if_absent's "already present" branch and silently win
+# over the real one.
+*.db
+*.db-shm
+*.db-wal
+*.db.snapshot
+*.db.restore
