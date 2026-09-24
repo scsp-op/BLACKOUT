@@ -1,5 +1,14 @@
 # BLACKOUT
 
+> **This is the Replit-targeted mirror.** The original, deployed on Railway,
+> lives at **https://github.com/moumenalaoui/BLACKOUT** — replace this placeholder with the link.
+>
+> Same application, different packaging. This repo builds from `.replit` +
+> `replit.nix` instead of a Dockerfile, and persists its database to Replit
+> App Storage instead of a mounted volume. Application code is otherwise the
+> same, so changes are portable in both directions — see
+> [Deployment (Replit)](#deployment-replit) for what differs and why.
+
 BLACKOUT is a read-only web app for exploring internet freedom, censorship, and network disruption by country. It combines a React/Cesium globe frontend with a Rust/Axum API, a local SQLite store, background fetchers, and a small set of seeded reference data.
 
 ## What the app does
@@ -281,3 +290,4 @@ one.
 - The deployment model is public and read-only. There is no auth layer.
 - Data freshness is mixed by design: some datasets are periodically fetched, some are committed seed files, and Starlink status is manually maintained.
 - Built by Moumen Alaoui at the FAI Hackathon 2026.
+- Upstream (Railway deployment): **[ORIGINAL_REPO_URL]**
