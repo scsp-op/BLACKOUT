@@ -12,7 +12,7 @@ body,
 
 body {
   margin: 0;
-  background: #080b11;
+  background: #060c13;
   color: #e6e9ef;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -50,7 +50,7 @@ p {
    outside the JS module). */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2b3a4b transparent;
+  scrollbar-color: #0a3161 transparent;
 }
 
 ::-webkit-scrollbar {
@@ -63,9 +63,9 @@ p {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1b2531;
+  background: #0e243e;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2b3a4b;
+  background: #0a3161;
 }

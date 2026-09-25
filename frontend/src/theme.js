@@ -1,13 +1,17 @@
-// Layered slate surface system — a blue-black base with three elevation levels
-// reads as "engineered" where a flat #000 reads as empty. BLACK is retained for
-// the Cesium globe scene, which stays pure black underneath the slate chrome
-// that floats over it.
+// Layered surface system — three elevation levels over a near-black base, all
+// pinned to the SCSP Blue hue axis (H213). Only the saturation climbs with
+// elevation; lightness is fixed per level, which is what keeps text contrast
+// identical across the ramp. BORDER_STRONG is SCSP Blue #0A3161 exactly, so the
+// brand color appears verbatim as the emphasis border. Keep new surfaces on
+// H213 — drifting the hue is what makes a palette look accidental. BLACK is
+// retained for the Cesium globe scene, which stays pure black underneath the
+// chrome that floats over it.
 export const BLACK         = '#000000'
-export const BASE          = '#080b11'
-export const SIDEBAR       = '#0d121a'
-export const RAISED        = '#141c28'
-export const BORDER        = '#1b2531'
-export const BORDER_STRONG = '#2b3a4b'
+export const BASE          = '#060c13'
+export const SIDEBAR       = '#09121e'
+export const RAISED        = '#0d1c2f'
+export const BORDER        = '#0e243e'
+export const BORDER_STRONG = '#0a3161'
 export const WHITE         = '#e6e9ef'
 export const MUTED         = '#8c95a3'
 
@@ -21,7 +25,12 @@ export const CYAN_DIM      = '#1c4a5a'
 export const US_EXPOSURE = '#a0aec0'
 export const CN_EXPOSURE = '#c9822b'
 export const LOCAL       = '#6c9a5b'
-export const CRIMSON     = '#c8102e'
+export const CRIMSON     = '#b31942'
+// Dim partner to CRIMSON (SCSP Dark Red). Currently unused: every crimson
+// surface in the app is a flat fill, swatch or text run, and the globe's bloom
+// falloff is shared with the amber layer so it can't take a red tint. Defined
+// here so the third SCSP brand color has a home when the wordmark lands.
+export const CRIMSON_DIM = '#851432'
 export const HIGHLIGHT   = '#d6b36a'
 export const AMBER       = '#d97706'
 export const DIM         = '#3d4f6b'

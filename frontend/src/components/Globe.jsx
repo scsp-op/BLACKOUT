@@ -48,7 +48,7 @@ function outageRadius(score) {
 
 // Empty-space colour behind/around the globe (skybox is off — see init —
 // so this, not a starfield texture, is what fills it).
-const SPACE_BG = '#040409'
+const SPACE_BG = '#03060a'
 
 // Whole-globe framing, centred on ~20°E/15°N rather than 0/0 so the front
 // hemisphere on load holds Europe, Africa, the Middle East and South Asia — the
@@ -85,7 +85,7 @@ function rgbaFrom(hex, alpha) {
 // Dark-slate land fill so every country reads as land over black ocean, even
 // with no index score. Opaque (the black globe sits beneath it) and a hair
 // below the SIDEBAR chrome tone so land stays subordinate to the panels.
-const LAND_COLOR = Cesium.Color.fromCssColorString('#111823')
+const LAND_COLOR = Cesium.Color.fromCssColorString('#0c1928')
 
 // Choropleth ramp for the composite censorship index (0 = free → 100 = most
 // censored): green → amber → crimson. Local constants so this doesn't depend on
@@ -93,7 +93,7 @@ const LAND_COLOR = Cesium.Color.fromCssColorString('#111823')
 // still read on top.
 const CHORO_LOW = Cesium.Color.fromCssColorString('#6c9a5b')
 const CHORO_MID = Cesium.Color.fromCssColorString('#d97706')
-const CHORO_HIGH = Cesium.Color.fromCssColorString('#c8102e')
+const CHORO_HIGH = Cesium.Color.fromCssColorString('#b31942')
 const CHORO_ALPHA = 0.55
 
 function choroplethColor(censorship) {
@@ -281,9 +281,12 @@ export default function Globe({
       }
 
       viewer.scene.globe.enableLighting = false
-      // Ocean = the globe base colour: a dark neutral charcoal, lifted off pure
-      // black so it doesn't read as a dead void, but with no blue tone.
-      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#121212')
+      // Ocean = the globe base colour: lifted off pure black so it doesn't read
+      // as a dead void, and sat on the SCSP Blue hue axis (H213) like the rest
+      // of the chrome. Kept very dark (L7) — the blue is a tone, not a tint.
+      // What this must NOT come back to is the bright ground-atmosphere wash
+      // that used to tint the ocean; that's disabled just below.
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0a111a')
       // Keep only the sky-atmosphere limb (a thin rim just outside the globe) so
       // the sphere still reads against space — but drop the ground atmosphere,
       // which is what tinted the ocean blue. The rim is dimmed and heavily

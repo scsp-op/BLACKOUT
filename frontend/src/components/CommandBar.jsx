@@ -1,4 +1,5 @@
 import { BLACK, BORDER, CRIMSON, MONO, MUTED, SANS, SIDEBAR, WHITE } from '../theme'
+import ScspLogo from './ScspLogo'
 
 const Divider = () => <span style={{ width: 1, height: 22, background: BORDER, flexShrink: 0 }} />
 
@@ -89,10 +90,17 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
         />
       </div>
 
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: 16 }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
         <Stat label="COUNTRIES" value={counts.countries} />
         <Stat label="SIGNALS" value={counts.signals} />
         <Stat label="OUTAGES" value={counts.outages} alert={counts.outages > 0} />
+
+        {/* Reversed SCSP lockup closes the bar. Same Divider as the wordmark
+            side, so the header reads as one rule of instrument groups rather
+            than a logo bolted on. WHITE rather than pure #fff: the mark sits
+            at the same tone as the rest of the chrome text. */}
+        <Divider />
+        <ScspLogo height={26} color={WHITE} />
       </div>
     </header>
   )
