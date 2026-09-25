@@ -77,10 +77,8 @@ const AGGREGATION_ENDPOINT: &str = "https://api.ooni.io/api/v1/aggregation";
 //
 // Cost of the six additions, measured against the live API rather than
 // guessed: tor 9.8s (17.9 MB, the largest response in the codebase),
-// deepseek 8.4s (6.0 MB), claude.ai 8.0s (6.2 MB), tails 4.7s (258 kB),
-// grapheneos 3.4s (213 kB), huggingface 3.4s (77 kB — OONI barely covers
-// it). ~38s of network plus pacing, which is why the `ooni` budget in
-// db/mod.rs went up alongside this.
+// deepseek 8.4s (6.0 MB), claude.ai 8.0s (6.2 MB), huggingface 3.4s (77 kB
+// — OONI barely covers it).
 const TIMELINE_TECHS: &[&str] = &[
     // Circumvention
     "tor",
@@ -94,9 +92,6 @@ const TIMELINE_TECHS: &[&str] = &[
     "claude.ai",
     "deepseek",
     "huggingface",
-    // Privacy OS
-    "grapheneos",
-    "tails",
 ];
 
 // ── Aggregation response ───────────────────────────────────────────────────
@@ -149,7 +144,6 @@ impl AggCell {
 enum TechCategory {
     AiAccess,
     Circumvention,
-    PrivacyOs,
     Messaging,
 }
 
@@ -158,7 +152,6 @@ impl TechCategory {
         match self {
             TechCategory::AiAccess => "AI_ACCESS",
             TechCategory::Circumvention => "CIRCUMVENTION",
-            TechCategory::PrivacyOs => "PRIVACY_OS",
             TechCategory::Messaging => "MESSAGING",
         }
     }
@@ -238,19 +231,6 @@ static REGISTRY: &[Technology] = &[
         category: TechCategory::Circumvention,
         url: None,
         test_name: "torsf",
-    },
-    // Privacy-preserving OS
-    Technology {
-        key: "grapheneos",
-        category: TechCategory::PrivacyOs,
-        url: Some("https://grapheneos.org"),
-        test_name: "web_connectivity",
-    },
-    Technology {
-        key: "tails",
-        category: TechCategory::PrivacyOs,
-        url: Some("https://tails.boum.org"),
-        test_name: "web_connectivity",
     },
     // Messaging apps, measured via their own dedicated OONI nettests (like
     // tor/psiphon above — `url: None`). These test whether the app's servers

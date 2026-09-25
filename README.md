@@ -11,7 +11,7 @@ BLACKOUT is a read-only web app for exploring internet freedom, censorship, and 
   - an optional submarine-cable overlay
   - live-polled satellite positions, with selectable categories and orbit paths
 - Opens a country sidebar with per-country metrics for:
-  - blocking status across AI access, circumvention tools, and privacy-focused operating systems
+  - blocking status across AI access and circumvention tools
   - messaging app reachability
   - censored content categories
   - 90-day outage history

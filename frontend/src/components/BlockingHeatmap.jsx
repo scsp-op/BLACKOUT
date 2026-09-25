@@ -4,12 +4,11 @@ import { BLOCKING_STATUS_COLOR } from '../lib/blockingRegistry'
 import { getGeo } from '../lib/api'
 
 // Category display, in the order the panel stacks them.
-const CATEGORY_ORDER = ['AI_ACCESS', 'CIRCUMVENTION', 'MESSAGING', 'PRIVACY_OS']
+const CATEGORY_ORDER = ['AI_ACCESS', 'CIRCUMVENTION', 'MESSAGING']
 const CATEGORY_LABEL = {
   AI_ACCESS: 'AI Access',
   CIRCUMVENTION: 'Circumvention',
   MESSAGING: 'Messaging',
-  PRIVACY_OS: 'Privacy OS',
 }
 
 // Friendlier names for the tool keys stored in technology_blocks.
@@ -28,8 +27,6 @@ const TECH_LABEL = {
   'claude.ai': 'Claude',
   deepseek: 'DeepSeek',
   huggingface: 'HuggingFace',
-  grapheneos: 'GrapheneOS',
-  tails: 'Tails',
 }
 
 // Tools measured in fewer than this many countries are dropped — their

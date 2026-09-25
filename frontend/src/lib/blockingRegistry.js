@@ -3,13 +3,11 @@ import { AMBER, BORDER, CRIMSON, DIM, LOCAL } from '../theme'
 export const BLOCKING_REGISTRY = {
   AI_ACCESS: ['openai.com', 'claude.ai', 'deepseek', 'huggingface'],
   CIRCUMVENTION: ['tor', 'torproject', 'signal', 'i2p', 'psiphon', 'torsf'],
-  PRIVACY_OS: ['grapheneos', 'tails'],
 }
 
 export const GROUP_LABELS = {
   AI_ACCESS: 'AI access',
   CIRCUMVENTION: 'Circumvention',
-  PRIVACY_OS: 'Privacy OS',
 }
 
 export const BLOCKING_STATUS_COLOR = {
@@ -49,8 +47,6 @@ export function buildBlockingMap(rows) {
   for (const row of rows) {
     const entry = (map[row.country_code] ??= { ALL: null, AI_ACCESS: null, CIRCUMVENTION: null })
     entry.ALL = worseOf(entry.ALL, row.status)
-    // PRIVACY_OS rows still count toward ALL but have no layer of their own,
-    // matching the layer toggles the header actually offers.
     if (LAYERS.includes(row.category)) {
       entry[row.category] = worseOf(entry[row.category], row.status)
     }
@@ -87,8 +83,6 @@ const TIMELINE_TECHNOLOGIES = [
   'claude.ai',
   'deepseek',
   'huggingface',
-  'grapheneos',
-  'tails',
 ]
 
 export function hasTimeline(_countryCode, technology) {

@@ -66,7 +66,7 @@ function BlockSegments({ filledCount, color }) {
 // `> 0` was too low to mean anything. OONI publishes the occasional isolated
 // day for a technology it barely covers in a country, and one such row was
 // enough to promote the technology, resurrect its whole group, and add a
-// group heading — Iran had exactly one `grapheneos` day against 400-990 days
+// group heading — Iran had exactly one such day against 400-990 days
 // for every technology actually tracked there. The resulting chart is a
 // single point, which draws no line at all, under a "1 days · peak ..."
 // footnote.
@@ -231,7 +231,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   const blockingByTech = Object.fromEntries(blockingRows.map((row) => [row.technology, row]))
   const groupsForLayer = layer === 'AI_ACCESS' || layer === 'CIRCUMVENTION'
     ? [layer]
-    : ['AI_ACCESS', 'CIRCUMVENTION', 'PRIVACY_OS']
+    : ['AI_ACCESS', 'CIRCUMVENTION']
 
   const visibleGroups = groupsForLayer
     .map((group) => ({
@@ -241,9 +241,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
     .filter(({ techs }) => techs.length > 0)
 
   const aiAccessGroups = visibleGroups.filter(({ group }) => group === 'AI_ACCESS')
-  const circumventionGroups = visibleGroups.filter(
-    ({ group }) => group === 'CIRCUMVENTION' || group === 'PRIVACY_OS',
-  )
+  const circumventionGroups = visibleGroups.filter(({ group }) => group === 'CIRCUMVENTION')
 
   // A row is only considered settled once BOTH fetches are in: `isMeaningful`
   // promotes a technology on either a point-in-time classification or a
@@ -254,8 +252,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   // CIRCUMVENTION-only view would report "no coverage" for AI access, when in
   // fact it was simply not asked for.
   const showAiAccess = groupsForLayer.includes('AI_ACCESS')
-  const showCircumvention =
-    groupsForLayer.includes('CIRCUMVENTION') || groupsForLayer.includes('PRIVACY_OS')
+  const showCircumvention = groupsForLayer.includes('CIRCUMVENTION')
 
   return (
     <div
@@ -339,12 +336,9 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
                   blockingByTech={blockingByTech}
                   timelineByTech={timelineByTech}
                   countryCode={country.country_code}
-                  // Only earns its place when PRIVACY_OS rows exist too and the
-                  // two groups need telling apart. With one group it repeats
-                  // the section title verbatim — CIRCUMVENTION / BLOCKING
-                  // STATUS / CIRCUMVENTION — which is a heading more than
-                  // every other section has.
-                  showGroupLabel={circumventionGroups.length > 1}
+                  // One group here, so a label would only restate the
+                  // section title.
+                  showGroupLabel={false}
                 />
               ) : (
                 <SectionState loading={blockingPending} emptyLabel="NO OONI COVERAGE" />
