@@ -31,7 +31,9 @@ export default function OutageFeed({ outages = [] }) {
         top: 12,
         right: 12,
         width: 260,
-        maxHeight: 'calc(100% - 24px)',
+        // 24px of margin, plus 45px to clear the index/cable legend row that
+        // sits at the bottom of the same column.
+        maxHeight: 'calc(100% - 69px)',
         display: 'flex',
         flexDirection: 'column',
         background: SIDEBAR,
