@@ -9,7 +9,11 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
-tower-http = { version = "0.5", features = ["fs"] }
+# `compression-gzip` only, deliberately not brotli: br compresses better but
+# its cost on a 2.3 MB body is far less predictable, and this server has 2
+# vCPUs shared with the SGP4 propagation that produces that body. gzip is
+# universally supported and measured 3.5x here.
+tower-http = { version = "0.5", features = ["fs", "compression-gzip"] }
 anyhow = "1"
 reqwest = { version = "0.12", features = ["json"] }
 csv = "1"

@@ -1,6 +1,7 @@
 use axum::{Extension, Router, routing::get};
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
+use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
 mod api;
@@ -207,6 +208,17 @@ async fn main() -> anyhow::Result<()> {
         // ServeDir, and anything ServeDir can't find falls through to
         // index.html so client-side routes and deep links resolve.
         .fallback_service(spa_service(&static_dir))
+        // Applied last so it wraps every route above *and* the SPA fallback —
+        // the static bundle is 13.7 MB, most of it Cesium, and was being
+        // served uncompressed to every first-time visitor.
+        //
+        // The default predicate skips bodies under 32 bytes and already-
+        // compressed content types (images, video), so the JPEG textures and
+        // the like are not re-compressed for nothing.
+        //
+        // Measured on /api/satellites: 2.36 MB -> 0.62 MB. That endpoint is
+        // polled every 7s per open tab, so it dominates egress.
+        .layer(CompressionLayer::new())
         .with_state(state.clone());
 
     // Defaults to 3001 (what the Vite dev proxy targets). Overridable so a
