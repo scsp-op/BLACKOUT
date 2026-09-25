@@ -61,14 +61,32 @@ function BlockSegments({ filledCount, color }) {
   )
 }
 
+// Days of history a timeline needs before it counts as a signal on its own.
+//
+// `> 0` was too low to mean anything. OONI publishes the occasional isolated
+// day for a technology it barely covers in a country, and one such row was
+// enough to promote the technology, resurrect its whole group, and add a
+// group heading — Iran had exactly one `grapheneos` day against 400-990 days
+// for every technology actually tracked there. The resulting chart is a
+// single point, which draws no line at all, under a "1 days · peak ..."
+// footnote.
+//
+// A week is the smallest window where a sparkline shows a shape rather than a
+// dot, and it sits far below the real technologies' hundreds of days, so it
+// separates noise from signal without hiding anything genuine.
+const MIN_TIMELINE_DAYS = 7
+
 // A row is worth showing only if it carries an actual signal: either the
 // point-in-time classification resolved to something other than
-// inconclusive/no-data, or there's a historical timeline behind it. A blank
-// "INCONCLUSIVE / 0" row tells a reader nothing and just adds noise.
+// inconclusive/no-data, or there's enough historical timeline behind it. A
+// blank "INCONCLUSIVE / 0" row tells a reader nothing and just adds noise.
 function isMeaningful(row, timelineRows) {
   const hasPointSignal = !!row && row.measurement_count > 0 && row.status !== 'INCONCLUSIVE'
-  const hasTimelineSignal = (timelineRows?.length ?? 0) > 0
-  return hasPointSignal || hasTimelineSignal
+  return hasPointSignal || hasEnoughTimeline(timelineRows)
+}
+
+function hasEnoughTimeline(timelineRows) {
+  return (timelineRows?.length ?? 0) >= MIN_TIMELINE_DAYS
 }
 
 // "Still fetching" and "there is genuinely nothing here" used to render
@@ -136,7 +154,7 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
   const anomalyRate = row?.anomaly_rate ?? 0
   const color = BLOCKING_STATUS_COLOR[status] ?? BORDER
   const filledCount = Math.max(0, Math.min(8, Math.round(anomalyRate * 8)))
-  const showTimeline = hasTimeline(countryCode, tech) && (timelineRows?.length ?? 0) > 0
+  const showTimeline = hasTimeline(countryCode, tech) && hasEnoughTimeline(timelineRows)
 
   return (
     <div>
@@ -321,6 +339,12 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
                   blockingByTech={blockingByTech}
                   timelineByTech={timelineByTech}
                   countryCode={country.country_code}
+                  // Only earns its place when PRIVACY_OS rows exist too and the
+                  // two groups need telling apart. With one group it repeats
+                  // the section title verbatim — CIRCUMVENTION / BLOCKING
+                  // STATUS / CIRCUMVENTION — which is a heading more than
+                  // every other section has.
+                  showGroupLabel={circumventionGroups.length > 1}
                 />
               ) : (
                 <SectionState loading={blockingPending} emptyLabel="NO OONI COVERAGE" />
