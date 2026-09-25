@@ -36,6 +36,21 @@ const GCS_ENDPOINT: &str = "https://storage.googleapis.com";
 /// listening and the connection is refused immediately anyway.
 const SIDECAR_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// How long to keep asking for the sidecar before concluding it is absent.
+///
+/// A single attempt was wrong, and it cost a full deployment. The app probed
+/// 2.8s after the container started, got a connection refused, and concluded
+/// "not on Replit" for the life of the process — so it cold-started and never
+/// restored, while the very same endpoint answered fine from the workspace
+/// shell. Nothing orders the sidecar's startup against the app's.
+///
+/// Bounded tightly, because this runs before the HTTP listener binds and every
+/// second here is a second of failing platform health checks. Ten seconds is
+/// long enough for a sidecar that is merely a few seconds behind the app, and
+/// short enough that a boot where it never appears is not noticeably delayed.
+/// `SNAPSHOT_SIDECAR_WAIT_SECS` overrides it; `0` means a single attempt.
+const DEFAULT_SIDECAR_WAIT_SECS: u64 = 10;
+
 /// Generous on purpose: the payload is a whole gzipped database (tens of MB),
 /// not an API response.
 const TRANSFER_TIMEOUT: Duration = Duration::from_secs(300);
@@ -92,16 +107,56 @@ impl ObjectStore {
             .build()
             .context("could not build the HTTP client")?;
 
-        let response = match http
-            .get(format!("{SIDECAR_ENDPOINT}/object-storage/default-bucket"))
-            .timeout(SIDECAR_TIMEOUT)
-            .send()
-            .await
-        {
-            Ok(r) => r,
-            // Connection refused / DNS / timeout: no sidecar, so not on Replit.
-            Err(_) => return Ok(None),
+        let wait = Duration::from_secs(
+            std::env::var("SNAPSHOT_SIDECAR_WAIT_SECS")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(DEFAULT_SIDECAR_WAIT_SECS),
+        );
+        let started = std::time::Instant::now();
+        let mut backoff = Duration::from_millis(400);
+        let mut attempts: u32 = 0;
+
+        let response = loop {
+            attempts += 1;
+            match http
+                .get(format!("{SIDECAR_ENDPOINT}/object-storage/default-bucket"))
+                .timeout(SIDECAR_TIMEOUT)
+                .send()
+                .await
+            {
+                Ok(r) => break r,
+                Err(e) => {
+                    if started.elapsed() >= wait {
+                        // Name the failure. "Connection refused" (nothing is
+                        // listening) and "operation timed out" (something is,
+                        // but wedged) call for completely different responses,
+                        // and they used to be logged identically — as nothing
+                        // at all.
+                        eprintln!(
+                            "snapshot: no App Storage sidecar at {SIDECAR_ENDPOINT} after \
+                             {attempts} attempt(s) over {:.1}s — last error: {e}",
+                            started.elapsed().as_secs_f32()
+                        );
+                        return Ok(None);
+                    }
+                    if attempts == 1 {
+                        println!(
+                            "snapshot: App Storage sidecar not up yet ({e}) — retrying for up to {}s.",
+                            wait.as_secs()
+                        );
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(Duration::from_secs(3));
+                }
+            }
         };
+        if attempts > 1 {
+            println!(
+                "snapshot: App Storage sidecar answered on attempt {attempts} after {:.1}s.",
+                started.elapsed().as_secs_f32()
+            );
+        }
 
         if !response.status().is_success() {
             bail!(
