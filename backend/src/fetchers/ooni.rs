@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::util::date::{days_ago_iso, is_iso_date, today_iso};
+use crate::util::date::{days_ago_iso, days_between, is_iso_date, today_iso};
 use anyhow::Result;
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -42,6 +42,15 @@ const CATEGORY_WINDOW_DAYS: i64 = 180;
 
 // The historical timeline charts start here.
 const TIMELINE_SINCE: &str = "2024-01-01";
+
+/// Days of already-stored timeline re-fetched on an incremental sweep.
+///
+/// OONI measurements arrive late and get reclassified for a few days after
+/// the fact, so resuming exactly at the newest stored date would freeze those
+/// days at their first, least-confident value. `INSERT OR REPLACE` on
+/// (country, technology, date) makes re-pulling them a correction rather than
+/// a duplicate — the same self-healing overlap `cloudflare_http` relies on.
+const TIMELINE_OVERLAP_DAYS: i64 = 7;
 
 const TARGET_URLS: [&str; 4] = [
     "https://api.openai.com",
@@ -296,16 +305,12 @@ pub async fn fetch_and_store(state: &AppState) -> Result<()> {
         eprintln!("ooni: technology block fetch failed: {e}");
         failures.push(format!("technology_blocks: {e}"));
     }
-    if let Err(e) = fetch_and_store_timeline(state, &known).await {
-        eprintln!("ooni: timeline fetch failed: {e}");
-        failures.push(format!("timeline: {e}"));
-    }
 
     if failures.is_empty() {
         Ok(())
     } else {
         anyhow::bail!(
-            "{}/3 phase(s) had failures: {}",
+            "{}/2 phase(s) had failures: {}",
             failures.len(),
             failures.join(" | ")
         )
@@ -852,6 +857,52 @@ struct TimelineRow {
 /// daily `blocking_timeline` for every country at once. Replaces the old
 /// hardcoded (country, technology) sweep, so a country gets a chart the moment
 /// it has measurements rather than only if it was on a hand-maintained list.
+/// Where this technology's timeline sweep should start.
+///
+/// The full window (`TIMELINE_SINCE`, ~21 months x ~230 countries) is only
+/// needed once. Re-pulling it every cycle is what broke this fetcher on
+/// deployment: measured against the live API, one technology's full sweep is
+/// 12.3 MiB / 9.3s versus 1.04 MiB / 2.1s for a trailing window — and twelve
+/// of those blew the budget and drew `504 Gateway Time-out` from OONI itself.
+///
+/// The row count matters as much as the bytes. A full backfill writes ~700k
+/// rows across twelve transactions, each holding the single
+/// `Arc<Mutex<Connection>>` the whole time, which starves every other fetcher
+/// that needs the database — `ooni_categories` is a 5.7s job that never once
+/// completed inside its 180s budget while this was running.
+///
+/// An empty table still gets the full backfill, so a cold start is unchanged.
+fn timeline_since(state: &AppState, technology: &str) -> String {
+    let newest: Option<String> = state.lock().ok().and_then(|conn| {
+        conn.query_row(
+            "SELECT MAX(measurement_date) FROM blocking_timeline WHERE technology = ?1",
+            rusqlite::params![technology],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .ok()
+        .flatten()
+    });
+
+    let Some(newest) = newest else {
+        return TIMELINE_SINCE.to_string();
+    };
+    match days_between(&newest, &today_iso()) {
+        Some(age) => days_ago_iso(age.max(0) + TIMELINE_OVERLAP_DAYS),
+        None => TIMELINE_SINCE.to_string(),
+    }
+}
+
+/// Its own fetcher rather than a third phase of `fetch_and_store`.
+///
+/// Sharing one budget meant a slow timeline sweep marked the whole OONI
+/// fetcher failed and took `technology_blocks` — the messaging, circumvention
+/// and AI-access rows the sidebar actually renders — down with it, even
+/// though that phase had already succeeded.
+pub async fn fetch_timelines(state: &AppState) -> Result<()> {
+    let known = known_codes(state)?;
+    fetch_and_store_timeline(state, &known).await
+}
+
 async fn fetch_and_store_timeline(state: &AppState, known: &HashSet<String>) -> Result<()> {
     let client = crate::util::http::client("ooni")
         .timeout(REQUEST_TIMEOUT)
@@ -863,11 +914,12 @@ async fn fetch_and_store_timeline(state: &AppState, known: &HashSet<String>) -> 
             continue;
         };
         let host = tech.url.map(host_of);
+        let since = timeline_since(state, tech_key);
         let mut query: Vec<(&str, &str)> = vec![
             ("test_name", tech.test_name),
             ("axis_x", "measurement_start_day"),
             ("axis_y", "probe_cc"),
-            ("since", TIMELINE_SINCE),
+            ("since", since.as_str()),
         ];
         if let Some(h) = host.as_deref() {
             query.push(("domain", h));
@@ -961,6 +1013,53 @@ fn insert_timeline_rows(state: &AppState, technology: &str, rows: &[TimelineRow]
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn db_with(rows: &[(&str, &str)]) -> AppState {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE blocking_timeline (
+                 country_code TEXT NOT NULL, technology TEXT NOT NULL,
+                 measurement_date TEXT NOT NULL, anomaly_count INTEGER NOT NULL,
+                 confirmed_count INTEGER NOT NULL, measurement_count INTEGER NOT NULL,
+                 ok_count INTEGER NOT NULL,
+                 PRIMARY KEY (country_code, technology, measurement_date));",
+        )
+        .unwrap();
+        for (tech, day) in rows {
+            conn.execute(
+                "INSERT INTO blocking_timeline VALUES ('IR', ?1, ?2, 0,0,0,0)",
+                rusqlite::params![tech, day],
+            )
+            .unwrap();
+        }
+        std::sync::Arc::new(std::sync::Mutex::new(conn))
+    }
+
+    #[test]
+    fn an_empty_timeline_still_gets_the_full_backfill() {
+        let state = db_with(&[]);
+        assert_eq!(timeline_since(&state, "psiphon"), TIMELINE_SINCE);
+    }
+
+    #[test]
+    fn a_technology_with_no_rows_of_its_own_gets_the_full_backfill() {
+        // Another technology having data must not make this one resume late
+        // and silently skip its own history.
+        let state = db_with(&[("psiphon", "2026-09-20")]);
+        assert_eq!(timeline_since(&state, "torsf"), TIMELINE_SINCE);
+    }
+
+    #[test]
+    fn a_populated_timeline_resumes_with_an_overlap() {
+        let newest = days_ago_iso(3);
+        let state = db_with(&[("psiphon", &newest)]);
+        let since = timeline_since(&state, "psiphon");
+
+        // 3 days old + 7 days overlap = 10 days back.
+        assert_eq!(since, days_ago_iso(3 + TIMELINE_OVERLAP_DAYS));
+        // And far short of the full window, which is the entire point.
+        assert!(since.as_str() > TIMELINE_SINCE, "incremental, not full: {since}");
+    }
 
     /// `fetch_and_store_timeline` looks each key up in `REGISTRY` and
     /// silently `continue`s when it is absent, so a typo in `TIMELINE_TECHS`
