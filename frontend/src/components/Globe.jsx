@@ -2,11 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import * as topojson from 'topojson-client'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { AMBER, CRIMSON } from '../theme'
-import { BLOCKING_STATUS_COLOR } from '../lib/blockingRegistry'
+import { CRIMSON } from '../theme'
 import { CATEGORY_COLOR_HEX } from './SatelliteLegend'
 
 const NUMERIC_CODE_ALIASES = new Map([[732, 'MA']])
+
+// Fallback for atlas features that carry no ISO numeric id at all, matched on
+// the atlas's own `properties.name`. Kosovo is the case that matters: the API
+// tracks it (XK, include_on_globe = 1) but its `iso_numeric` is null — it has
+// no ISO 3166-1 numeric code — and the atlas feature has no id either, so the
+// numeric join can never reach it and the country renders as land that cannot
+// be clicked.
+//
+// The atlas's four other id-less features are left unmapped on purpose:
+// Somaliland and N. Cyprus are not tracked by the API, and Siachen Glacier /
+// Indian Ocean Ter. are disputed or dependent territories with no country of
+// their own to select. Mapping those onto a neighbour would be a territorial
+// claim, not a bug fix.
+const NAME_CODE_ALIASES = new Map([['Kosovo', 'XK']])
 
 function borderGroupForNumeric(numeric) {
   if (numeric === 504 || numeric === 732) return 'MA'
@@ -32,14 +45,6 @@ function pulse01(periodMs) {
   return 0.5 - 0.5 * Math.cos(((now % periodMs) / periodMs) * Math.PI * 2)
 }
 
-// Confirmed-blocked bloom radius scales with the composite index (more censored
-// → larger glow) so the acute layer carries hierarchy instead of a uniform
-// field. Outage bloom radius steps with IODA severity. Metres, on the surface.
-function confirmedRadius(index) {
-  const t = index == null ? 0.5 : Math.max(0, Math.min(100, index)) / 100
-  return 130_000 + t * 260_000
-}
-
 function outageRadius(score) {
   if (score >= 200) return 340_000
   if (score >= 60) return 240_000
@@ -59,21 +64,26 @@ const HOME_VIEW = { lon: 20.0, lat: 15.0, height: 20_000_000 }
 // top of them rather than z-fighting at the surface.
 const CABLE_HEIGHT = 2500
 
-// The acute layer is crimson, full stop: confirmed blocks and live outages are
-// both "trouble". Reusing the confirmed-blocked status colour keeps a glow on
-// the globe meaning the same thing as the crimson status in the sidebar.
-const ACUTE_HEX = BLOCKING_STATUS_COLOR.CONFIRMED_BLOCKED ?? CRIMSON
+// How far the cursor may sit from a satellite's projected centre and still
+// count as a hit, in pixels. Points are drawn at 2-3px, so this is deliberately
+// about the size of the dot itself: Cesium's own pick tolerance is wider, and
+// letting it decide is what made the cloud swallow country clicks.
+// Land tint under the cursor. Same hue as LAND_COLOR (H213), lifted from L10
+// to L20 — clearly a response without becoming a second data colour. This is
+// the only thing that tells you bare land is clickable; before it, the cursor
+// change was the sole affordance.
+const LAND_HOVER_HEX = '#17304f'
 
-// Likely-blocked countries used to draw nothing at all, so 39 countries the
-// sidebar reported as blocked had no mark on the globe — and on the AI_ACCESS
-// layer, where only one country is confirmed, the globe looked broken. They now
-// bloom amber, reusing the same status colour the sidebar uses, so the
-// confirmed/likely distinction survives instead of being flattened or dropped.
-const LIKELY_HEX = BLOCKING_STATUS_COLOR.LIKELY_BLOCKED ?? AMBER
+// Hover fires on every mouse move, and drillPick costs several render passes,
+// so it is rate-limited. 50ms is well under the threshold where a highlight
+// feels laggy but caps the picking work at 20/s instead of ~60/s.
+const HOVER_THROTTLE_MS = 50
 
-// Likely blooms are drawn smaller as well as amber: severity reads through size
-// even for a viewer who cannot separate the two hues.
-const LIKELY_RADIUS_SCALE = 0.62
+const SAT_PICK_SLOP_PX = 3
+
+// Reused across picks so hover (which fires on every mouse move) doesn't
+// allocate a Cartesian2 per event.
+const scratchWindowPosition = new Cesium.Cartesian2()
 
 // A css rgba() string from a theme hex + alpha, for the radial-gradient canvas
 // textures below.
@@ -86,6 +96,7 @@ function rgbaFrom(hex, alpha) {
 // with no index score. Opaque (the black globe sits beneath it) and a hair
 // below the SIDEBAR chrome tone so land stays subordinate to the panels.
 const LAND_COLOR = Cesium.Color.fromCssColorString('#0c1928')
+const LAND_HOVER_COLOR = Cesium.Color.fromCssColorString(LAND_HOVER_HEX)
 
 // Choropleth ramp for the composite censorship index (0 = free → 100 = most
 // censored): green → amber → crimson. Local constants so this doesn't depend on
@@ -177,18 +188,17 @@ function satelliteColor(category) {
 }
 
 // `geoByCode` supplies centroids and bounding boxes for every country the
-// basemap can draw (from /api/geo). `blockingByCode` decides which of those get
-// a marker and what colour it is — the globe no longer reads sanctions_tier, so
-// the researched policy dossiers are deliberately not a prop.
+// basemap can draw (from /api/geo). Blocking status is deliberately not a prop:
+// the globe shows censorship intensity through the choropleth and live events
+// through the outage blooms, and the per-country blocking detail belongs to the
+// sidebar. The researched policy dossiers are likewise not a prop.
 export default function Globe({
-  blockingByCode = {},
   geoByCode = {},
   outages = [],
   indexByCode = {},
   showIndex = true,
   onCountrySelect,
   onLoadError,
-  layer = 'ALL',
   selectedCode = '',
   satellites = [],
   onSatelliteSelect,
@@ -203,7 +213,6 @@ export default function Globe({
   // Per-country marker state: a crimson bloom entity for each confirmed-blocked
   // country (the only visible status marks). Picking is handled by the land
   // fill, not markers, so there are no invisible pick billboards anymore.
-  const markerStateRef = useRef({})
   const outageStateRef = useRef({})
   // Choropleth: the loaded basemap geojson is stashed here in init so the
   // fill effect (which reacts to index data arriving later) can reuse it, and
@@ -213,6 +222,11 @@ export default function Globe({
   // Static dark-slate land fill (built once from the basemap geometry); tracked
   // so it can be torn down with the viewer.
   const landRef = useRef(null)
+  // code → the ids of every ring drawn for that country, so a multi-part
+  // country (USA, Indonesia) lights all of its pieces on hover rather than
+  // just whichever ring happened to be built first.
+  const landRingIdsRef = useRef(null)
+  const hoveredCodeRef = useRef(null)
   // GPU-batched point cloud for satellite markers (one collection, positions
   // updated per poll) and a polyline collection for the selected satellite's
   // orbit path — both created once in init, alongside outlineCollection.
@@ -393,8 +407,17 @@ export default function Globe({
       // carry it in entity properties. Clicking the ocean resolves to nothing.
       // This is what lets any country — not just signalled ones — be selected
       // from the globe, matching the header dropdown.
-      const codeFromPick = (picked) =>
-        typeof picked?.id === 'string' ? picked.id : picked?.id?.properties?.code?.getValue()
+      const codeFromPick = (picked) => {
+        const id = picked?.id
+        // Land rings are `<code>#<ring>` so each ring carries a unique id and
+        // can be recoloured on its own; everything else that resolves to a
+        // country (the blooms, the selection marker) uses the bare code.
+        if (typeof id === 'string') {
+          const hash = id.indexOf('#')
+          return hash === -1 ? id : id.slice(0, hash)
+        }
+        return id?.properties?.code?.getValue()
+      }
 
       // Satellite points carry their NORAD ID (a number) directly as `.id`,
       // set when each PointPrimitive is added — same convention as the land
@@ -402,24 +425,114 @@ export default function Globe({
       // pick targets can't collide.
       const satelliteIdFromPick = (picked) => (typeof picked?.id === 'number' ? picked.id : null)
 
+      // Satellites are drawn above everything else, so a plain `scene.pick` —
+      // which returns only the topmost hit — hands back a satellite for most
+      // clicks and the country underneath becomes unreachable. With the full
+      // catalogue on, ~8.5k points are on the near side at once and each has a
+      // pick footprint a little larger than its 2-3px dot, so they cover
+      // roughly half the visible globe.
+      //
+      // Drilling through the stack does not solve this: in the dense shells
+      // well over a dozen points can overlap one cursor position, so any fixed
+      // drill depth is exhausted by satellites before it reaches land. Instead
+      // the layer is hidden for a single extra pick, which is bounded at two
+      // picks no matter how deep the cloud is. `show` is restored before the
+      // next frame, so nothing flickers — pick renders to its own framebuffer.
+      // Pass 2: the cursor is over the satellite layer but not on a dot. Hide
+      // that layer for one pick so the country beneath is reachable. A shallow
+      // drill rather than a single pick because the border polylines are drawn
+      // above the fills and carry no id — a plain pick can land on a hairline
+      // and resolve to nothing.
+      const pickCountryBehindSatellites = (windowPosition) => {
+        const scene = viewer.scene
+        const satellitePoints = satPointsRef.current
+        if (satellitePoints) satellitePoints.show = false
+        try {
+          for (const picked of scene.drillPick(windowPosition, 4)) {
+            const code = codeFromPick(picked)
+            if (code) return code
+          }
+          return undefined
+        } finally {
+          if (satellitePoints) satellitePoints.show = true
+        }
+      }
+
+      const resolvePick = (windowPosition) => {
+        const scene = viewer.scene
+        const top = scene.pick(windowPosition)
+
+        const noradId = satelliteIdFromPick(top)
+        if (noradId == null) {
+          const code = codeFromPick(top)
+          // No satellite on top, but possibly a border hairline with no id —
+          // the same shallow drill resolves that too.
+          return { code: code ?? pickCountryBehindSatellites(windowPosition) }
+        }
+
+        // A satellite is on top. It only wins if the cursor is genuinely on the
+        // dot, rather than merely inside Cesium's more forgiving pick rectangle
+        // — that check is what shrinks the target back to what the user sees.
+        const worldPosition = top.primitive?.position
+        if (worldPosition) {
+          const dotCentre = Cesium.SceneTransforms.worldToWindowCoordinates(
+            scene,
+            worldPosition,
+            scratchWindowPosition,
+          )
+          if (
+            dotCentre &&
+            Cesium.Cartesian2.distance(dotCentre, windowPosition) <= SAT_PICK_SLOP_PX
+          ) {
+            return { noradId }
+          }
+        }
+
+        return { code: pickCountryBehindSatellites(windowPosition) }
+      }
+
+      // Recolour every ring of one country in place. The land layer is a single
+      // Primitive with per-instance colour, so this needs no new geometry and
+      // no rebuild — just a write to the instance attribute.
+      const tintLand = (code, color) => {
+        const primitive = landRef.current
+        if (!primitive || !primitive.ready) return
+        const ids = landRingIdsRef.current?.get(code)
+        if (!ids) return
+        const value = Cesium.ColorGeometryInstanceAttribute.toValue(color)
+        for (const id of ids) {
+          const attributes = primitive.getGeometryInstanceAttributes(id)
+          if (attributes) attributes.color = value
+        }
+      }
+
+      let lastHoverAt = 0
       handler.setInputAction(({ endPosition }) => {
-        const picked = viewer.scene.pick(endPosition)
-        const hit = satelliteIdFromPick(picked) != null || codeFromPick(picked)
-        viewer.scene.canvas.style.cursor = hit ? 'pointer' : 'default'
+        const now = performance.now()
+        if (now - lastHoverAt < HOVER_THROTTLE_MS) return
+        lastHoverAt = now
+
+        const { noradId, code } = resolvePick(endPosition)
+        viewer.scene.canvas.style.cursor = noradId != null || code ? 'pointer' : 'default'
+
+        const previous = hoveredCodeRef.current
+        const next = code ?? null
+        if (next === previous) return
+        if (previous) tintLand(previous, LAND_COLOR)
+        if (next) tintLand(next, LAND_HOVER_COLOR)
+        hoveredCodeRef.current = next
       }, Cesium.ScreenSpaceEventType.MOUSE_MOVE)
 
       // Click → report selection up. The camera fly-to lives in the selection-
       // framing effect so click and dropdown share one framing path.
       handler.setInputAction(({ position }) => {
-        const picked = viewer.scene.pick(position)
+        const { noradId, code } = resolvePick(position)
 
-        const noradId = satelliteIdFromPick(picked)
         if (noradId != null) {
           onSatelliteSelectRef.current?.(noradId)
           return
         }
 
-        const code = codeFromPick(picked)
         if (!code) return
         onCountrySelectRef.current?.(code)
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK)
@@ -442,57 +555,6 @@ export default function Globe({
       }
     }
   }, [])
-
-  // Acute status layer, rebuilt when the data or active layer changes. Only
-  // CONFIRMED blocks get a visible mark — a crimson surface bloom; everything
-  // else (likely, accessible, inconclusive) is carried by the choropleth, so
-  // the globe stops being a field of identical stickers. Picking is handled by
-  // the land fill below, so no marker is needed just to make a country clickable.
-  useEffect(() => {
-    if (!ready) return
-    const viewer = viewerRef.current
-    if (!viewer || viewer.isDestroyed()) return
-
-    const markerState = markerStateRef.current
-    for (const [code, m] of Object.entries(markerState)) {
-      if (m.bloomEntity) viewer.entities.remove(m.bloomEntity)
-      delete markerState[code]
-    }
-
-    for (const [code, entry] of Object.entries(blockingByCode)) {
-      const status = entry?.[layer] ?? 'NO_DATA'
-      const confirmed = status === 'CONFIRMED_BLOCKED'
-      const likely = status === 'LIKELY_BLOCKED'
-      if (!confirmed && !likely) continue
-
-      const geo = geoByCode[code]
-      if (!geo || geo.centroid_lon == null || geo.centroid_lat == null) continue
-
-      // A steady surface bloom, sized by the composite index for hierarchy.
-      // Sits at 3000 m and hugs the surface, so it reads as signal radiating
-      // off the country rather than a pin standing on it. Full-alpha material
-      // lets the hot core carry the brightness, and it carries the country code
-      // so clicking the bloom selects, just like clicking the land.
-      const radius =
-        confirmedRadius(indexByCode[code]) * (confirmed ? 1 : LIKELY_RADIUS_SCALE)
-      const bloomEntity = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(geo.centroid_lon, geo.centroid_lat),
-        properties: { code },
-        ellipse: {
-          semiMajorAxis: radius,
-          semiMinorAxis: radius,
-          height: 3000,
-          material: new Cesium.ImageMaterialProperty({
-            image: bloomCanvas(confirmed ? ACUTE_HEX : LIKELY_HEX),
-            transparent: true,
-            color: Cesium.Color.WHITE,
-          }),
-        },
-      })
-
-      markerState[code] = { bloomEntity }
-    }
-  }, [ready, blockingByCode, geoByCode, indexByCode, layer])
 
   // Global internet-outage overlay, rebuilt whenever the active-outage set
   // changes. Independent of the blocking markers so it can light up any country
@@ -560,12 +622,27 @@ export default function Globe({
     }
 
     const instances = []
+    const ringIdsByCode = new Map()
     const addRing = (ring, code) => {
       if (!ring || ring.length < 3) return
       const flat = []
       for (const [lng, lat] of ring) flat.push(lng, lat)
+
+      let id
+      if (code) {
+        const ids = ringIdsByCode.get(code) ?? []
+        id = `${code}#${ids.length}`
+        ids.push(id)
+        ringIdsByCode.set(code, ids)
+      }
+
       instances.push(new Cesium.GeometryInstance({
-        id: code, // string country code → scene.pick returns it directly
+        // `<code>#<ring>`: unique per ring so each can be recoloured on hover,
+        // and parsed back to the country by codeFromPick. Left undefined for a
+        // feature that resolves to no tracked country, which makes the ring
+        // explicitly unpickable instead of carrying `id: undefined` by
+        // accident — the polygon still draws, so the map keeps its coastlines.
+        ...(id ? { id } : {}),
         geometry: new Cesium.PolygonGeometry({
           polygonHierarchy: new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(flat)),
           height: 250, // below choropleth (600) and borders (2000)
@@ -575,12 +652,30 @@ export default function Globe({
       }))
     }
 
+    // The atlas ships ~241 features against the ~196 countries the API tracks,
+    // so some land legitimately belongs to no selectable country (dependencies,
+    // disputed areas, Antarctica). The warning exists to tell those apart from
+    // a real country that is silently unclickable because its ISO numeric never
+    // resolved — add an entry to NUMERIC_CODE_ALIASES when one shows up here.
+    const unresolved = []
+
     for (const feature of geojson.features) {
       const numeric = parseInt(feature.id, 10)
-      const code = numericToCode.get(numeric) ?? NUMERIC_CODE_ALIASES.get(numeric)
+      const code =
+        numericToCode.get(numeric) ??
+        NUMERIC_CODE_ALIASES.get(numeric) ??
+        NAME_CODE_ALIASES.get(feature.properties?.name)
+      if (!code) unresolved.push(`${feature.properties?.name ?? '?'} (${feature.id})`)
       const g = feature.geometry
       if (g.type === 'Polygon') addRing(g.coordinates[0], code)
       else if (g.type === 'MultiPolygon') g.coordinates.forEach((poly) => addRing(poly[0], code))
+    }
+
+    if (import.meta.env.DEV && unresolved.length) {
+      console.warn(
+        `globe: ${unresolved.length} land features map to no tracked country and are not clickable:\n  ` +
+          unresolved.join('\n  '),
+      )
     }
 
     if (instances.length === 0) return
@@ -591,12 +686,18 @@ export default function Globe({
     })
     viewer.scene.primitives.add(primitive)
     landRef.current = primitive
+    landRingIdsRef.current = ringIdsByCode
+    // Any tint from the previous primitive died with it, so drop the record of
+    // it too — otherwise the next hover would try to restore a stale ring id.
+    hoveredCodeRef.current = null
 
     return () => {
       if (landRef.current && !viewer.isDestroyed()) {
         viewer.scene.primitives.remove(landRef.current)
       }
       landRef.current = null
+      landRingIdsRef.current = null
+      hoveredCodeRef.current = null
     }
   }, [ready, geoByCode])
 
@@ -625,11 +726,15 @@ export default function Globe({
     }
 
     const instances = []
-    const addRing = (ring, color) => {
+    const addRing = (ring, color, code) => {
       if (!ring || ring.length < 3) return
       const flat = []
       for (const [lng, lat] of ring) flat.push(lng, lat)
       instances.push(new Cesium.GeometryInstance({
+        // The choropleth sits above the land fill, so it — not the land — is
+        // what a click over a scored country reaches. It therefore has to
+        // carry the country code itself. See the note on allowPicking below.
+        id: code,
         geometry: new Cesium.PolygonGeometry({
           polygonHierarchy: new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(flat)),
           height: 600, // above the black globe (avoids z-fight), below borders (2000)
@@ -648,8 +753,8 @@ export default function Globe({
       if (score == null) continue
       const color = choroplethColor(score)
       const g = feature.geometry
-      if (g.type === 'Polygon') addRing(g.coordinates[0], color)
-      else if (g.type === 'MultiPolygon') g.coordinates.forEach((poly) => addRing(poly[0], color))
+      if (g.type === 'Polygon') addRing(g.coordinates[0], color, code)
+      else if (g.type === 'MultiPolygon') g.coordinates.forEach((poly) => addRing(poly[0], color, code))
     }
 
     if (instances.length === 0) return
@@ -657,9 +762,14 @@ export default function Globe({
       geometryInstances: instances,
       appearance: new Cesium.PerInstanceColorAppearance({ flat: true, translucent: true }),
       asynchronous: false,
-      // Non-pickable so clicks fall through to the land polygons beneath, which
-      // carry the country code — otherwise scored countries couldn't be clicked.
-      allowPicking: false,
+      // Deliberately pickable. This layer used to set `allowPicking: false` in
+      // the belief that clicks would fall through to the land fill beneath —
+      // they do not. `allowPicking: false` only stops a primitive from
+      // producing a pick ID; its geometry still renders in the pick pass and
+      // still writes depth, so it hid the land behind it. The effect was that
+      // every country with an index score was unclickable on its landmass and
+      // only the blooms above the choropleth could be hit. The fix is for the
+      // topmost layer to carry the code, not to try to be invisible to picks.
     })
     viewer.scene.primitives.add(primitive)
     choroplethRef.current = primitive
