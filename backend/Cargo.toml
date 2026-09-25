@@ -24,6 +24,12 @@ dotenvy = "0.15"
 # roughly a quarter of its size, which is the difference between a few hundred
 # MB and tens of GB of App Storage bandwidth per month.
 flate2 = "1"
+# Markdown -> HTML for the methodology docs (src/api/methodology.rs). Pure
+# Rust, and kept that way by `default-features = false`: the default set drags
+# in `cli` (clap) and `syntect-onig`, and the latter links the C Oniguruma
+# regex library — a system dependency replit.nix would then have to provide,
+# for syntax highlighting on documents that contain no code.
+comrak = { version = "0.55", default-features = false }
 sgp4 = "2.4"
 # Pulled in transitively by sgp4 (for TLE/OMM epoch handling); declared
 # directly here too since a transitive dependency isn't `use`-able on its own,

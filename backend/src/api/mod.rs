@@ -12,6 +12,7 @@ pub mod http_protocol_share;
 #[allow(dead_code)]
 pub mod evaluate;
 pub mod ixp;
+pub mod methodology;
 pub mod models;
 pub mod outages;
 pub mod rankings;

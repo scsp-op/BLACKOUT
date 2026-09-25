@@ -48,7 +48,9 @@ export default function IndexLegend({ show, onToggle }) {
         {show ? 'HIDE' : 'SHOW'}
       </button>
 
-      <span style={{ fontFamily: MONO, fontSize: 8, color: MUTED }}>V-Dem · RSF · FH blend</span>
+      {/* The composite is V-Dem + RSF only — see backend/src/api/censorship_index.rs.
+          No Freedom House data is fetched, stored or weighted anywhere in the system. */}
+      <span style={{ fontFamily: MONO, fontSize: 8, color: MUTED }}>V-Dem · RSF blend</span>
     </div>
   )
 }

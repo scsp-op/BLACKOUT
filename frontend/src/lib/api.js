@@ -155,3 +155,23 @@ export async function getSatelliteOrbit(noradId) {
   if (!r.ok) throw new Error(`Failed to fetch orbit for ${noradId}`)
   return r.json()
 }
+
+// The methodology documents, rendered to HTML server-side (see
+// backend/src/api/methodology.rs). This returns the chooser index only —
+// every field except the document body — because the bodies are tens of
+// kilobytes each and the chooser shows neither.
+export async function getMethodologyIndex() {
+  const r = await fetch(`${BASE}/methodology`)
+  if (!r.ok) throw new Error('Failed to fetch methodology index')
+  return r.json()
+}
+
+// One document: `{ slug, title, subtitle, kind, html, toc, word_count }`.
+// Unlike getCountry(), a 404 here is a genuine error and
+// throws — the set of documents is fixed at compile time, so a miss means a
+// bad URL rather than a country that simply has no dossier row.
+export async function getMethodologyDoc(slug) {
+  const r = await fetch(`${BASE}/methodology/${slug}`)
+  if (!r.ok) throw new Error(`Failed to fetch methodology document "${slug}"`)
+  return r.json()
+}
