@@ -1,5 +1,6 @@
 import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
 import { SOURCES } from '../lib/sources'
+import { linkProps } from '../lib/router'
 
 // Honest link state: mirrors whether the primary country fetch is in flight,
 // succeeded, or errored — not a fabricated socket. App derives `status` from
@@ -105,6 +106,20 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
           {formatAge(dataAge)}
         </span>
       </span>
+
+      <span style={{ width: 1, height: 12, background: BORDER }} />
+
+      {/* The tool's account of itself sits immediately before the byline: the
+          two answer the same question a viewer has on arrival — who made this
+          and on what basis — so they read as one credit rather than a menu
+          item parked elsewhere. */}
+      <a
+        {...linkProps('/methodology')}
+        className="repo-link"
+        style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
+      >
+        METHODOLOGY
+      </a>
 
       <span style={{ width: 1, height: 12, background: BORDER }} />
 

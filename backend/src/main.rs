@@ -196,6 +196,14 @@ async fn main() -> anyhow::Result<()> {
         // `satellites_status` takes both, because half of what it reports is
         // refresh history that only survives restarts by living in SQLite.
         .route_layer(Extension(satellite_catalog))
+        // Placed after `route_layer` above on purpose: these handlers take
+        // neither the satellite catalog nor `State`, and nothing is gained by
+        // sitting inside that Extension's scope.
+        .route("/api/methodology", get(api::methodology::list_methodology))
+        .route(
+            "/api/methodology/:slug",
+            get(api::methodology::get_methodology),
+        )
         .route(
             "/api/http-protocol-share",
             get(api::http_protocol_share::list_http_protocol_share),
