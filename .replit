@@ -85,8 +85,14 @@ SNAPSHOT_KEY = "mena_ai.db.gz"
 # old image installed ca-certificates and replit.nix installs pkgs.cacert.
 SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
 
-# App Storage. The sidecar resolves the default bucket on its own once App
-# Storage is enabled for this app, so this normally needs nothing. Uncomment
-# and fill in only if the sidecar reports no default bucket.
-# [objectStorage]
-# defaultBucketID = "replit-objstore-..."
+# App Storage. Declared explicitly rather than left to the sidecar's own
+# default-bucket lookup, because that lookup never gets a chance in a
+# deployment: the sidecar answers on 127.0.0.1:1106 in the workspace but
+# nothing listens there in the published container, observed over 7 attempts
+# and 11.8s. The working theory is that Replit only provisions the
+# object-storage sidecar for deployments that declare they need it, and this
+# is the declaration. If the next deploy still logs "no App Storage sidecar",
+# the theory is wrong and persistence has to move to Replit Postgres, which
+# hands out a plain connection string with no sidecar involved.
+[objectStorage]
+defaultBucketID = "replit-objstore-e3c7f8cf-5453-4aa1-8176-5cd38804d9f3"

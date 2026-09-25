@@ -130,9 +130,9 @@ export async function getMessaging(countryCode) {
 }
 
 // Satellite positions, SGP4-propagated server-side from cached CelesTrak
-// orbital elements. Computed fresh on every call — there is no server-side
-// position cache — so the caller is expected to poll this every 5-10s for
-// satellites that visibly move, rather than fetching it once. `category`
+// orbital elements. Propagated to "now" and memoised server-side for ~1s, so
+// polling every 5-10s for satellites that visibly move is expected and cheap;
+// several viewers polling in the same second share one computation. `category`
 // omitted/falsy fetches every tracked object ("All Satellites"). The legend is
 // single-select, but a row may stand for several backend categories (the
 // derived "Other / Unclassified" bucket), so this takes either one category or

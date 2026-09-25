@@ -208,9 +208,16 @@ shutdown snapshot is what makes an ordinary redeploy lossless; the interval
 bounds only what an unplanned crash costs.
 
 A snapshot is `VACUUM INTO` plus gzip — a consistent, defragmented image at
-roughly a quarter the size of the live file. The bucket was seeded from an
-existing database, so the first deploy started with full history rather than a
-cold fetch.
+roughly a quarter the size of the live file.
+
+**This does not currently work on the deployment.** The App Storage sidecar
+answers on `127.0.0.1:1106` from the workspace but nothing listens there in
+the published container — observed over 7 attempts across 11.8s. Until that is
+resolved the app cold-starts on every publish: it is fully serving in under a
+second and fully current in about two and a half minutes, but history that
+upstream will not re-serve (outage events beyond 90 days, BGP and HTTP/3
+beyond 14) resets each time. A seeded snapshot is kept outside the repo ready
+to restore once it does work.
 
 A failed restore never overwrites a good snapshot. When the download errors no
 snapshot task is spawned for that process, so no code path can write, and a
