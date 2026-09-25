@@ -33,6 +33,13 @@ import './App.css'
 // once per session and never re-polled.
 const SATELLITE_POLL_MS = 7000
 
+// Outages are the globe's only live layer now that the static blocking blooms
+// are gone, so they have to keep arriving rather than being a snapshot of
+// whenever the tab was opened. Slower than the satellite poll because these are
+// detected events, not positions: IODA takes minutes to confirm one, so polling
+// faster would just re-fetch the same list.
+const OUTAGE_POLL_MS = 60_000
+
 export default function App() {
   // `countries` and `blocking` are owned here and passed down, rather than
   // fetched independently by the components that derive from them (the globe
@@ -265,20 +272,35 @@ export default function App() {
     }
   }, [])
 
-  // Live internet-outage overlay. Fetches currently-active IODA events plus
-  // every country's centroid, then aggregates events to one entry per country
-  // (severity = worst score, recency = latest start) for the globe pings and
-  // the feed panel. Non-fatal: a failure just leaves the overlay empty.
+  // Live internet-outage overlay, re-polled on an interval. Fetches
+  // currently-active IODA events plus every country's centroid, then
+  // aggregates events to one entry per country (severity = worst score,
+  // recency = latest start) for the globe blooms, the feed panel and the
+  // command-bar counter — all three read this one piece of state, so they
+  // stay in step. Non-fatal: see the failure handling inside.
   useEffect(() => {
     let cancelled = false
+    // Country centroids are static reference data — fetched once and reused by
+    // every poll. Held in a local rather than a ref so a failed first fetch is
+    // simply retried on the next tick instead of poisoning the layer forever.
+    let centroid = null
+    // A poll that fails after the layer is populated keeps the previous
+    // outages on screen. Blanking the globe on one dropped request would read
+    // as "everything recovered", which is the opposite of the truth.
+    let loaded = false
 
-    Promise.all([getGeo(), getOutages({ active: true })])
-      .then(([geo, events]) => {
+    async function poll() {
+      try {
+        if (!centroid) {
+          const geo = await getGeo()
+          if (cancelled) return
+          centroid = new Map(
+            geo.map((g) => [g.country_code, { name: g.country_name, lat: g.centroid_lat, lon: g.centroid_lon }]),
+          )
+        }
+
+        const events = await getOutages({ active: true })
         if (cancelled) return
-
-        const centroid = new Map(
-          geo.map((g) => [g.country_code, { name: g.country_name, lat: g.centroid_lat, lon: g.centroid_lon }]),
-        )
 
         const byCountry = new Map()
         for (const e of events) {
@@ -304,13 +326,17 @@ export default function App() {
 
         const aggregated = [...byCountry.values()].sort((a, b) => b.latestStart - a.latestStart)
         setOutages(aggregated)
-      })
-      .catch(() => {
-        if (!cancelled) setOutages([])
-      })
+        loaded = true
+      } catch {
+        if (!cancelled && !loaded) setOutages([])
+      }
+    }
 
+    poll()
+    const id = setInterval(poll, OUTAGE_POLL_MS)
     return () => {
       cancelled = true
+      clearInterval(id)
     }
   }, [])
 
@@ -472,13 +498,11 @@ export default function App() {
         <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
           <Globe
             geoByCode={geoByCode}
-            blockingByCode={blockingByCode}
             outages={outages}
             indexByCode={indexByCode}
             showIndex={showIndex}
             onCountrySelect={setSelectedCode}
             onLoadError={setGlobeError}
-            layer={layer}
             selectedCode={selectedCode}
             satellites={satellites}
             onSatelliteSelect={setSelectedSatelliteId}

@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import * as topojson from 'topojson-client'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { AMBER, CRIMSON } from '../theme'
-import { BLOCKING_STATUS_COLOR } from '../lib/blockingRegistry'
+import { CRIMSON } from '../theme'
 import { CATEGORY_COLOR_HEX } from './SatelliteLegend'
 
 const NUMERIC_CODE_ALIASES = new Map([[732, 'MA']])
@@ -46,14 +45,6 @@ function pulse01(periodMs) {
   return 0.5 - 0.5 * Math.cos(((now % periodMs) / periodMs) * Math.PI * 2)
 }
 
-// Confirmed-blocked bloom radius scales with the composite index (more censored
-// → larger glow) so the acute layer carries hierarchy instead of a uniform
-// field. Outage bloom radius steps with IODA severity. Metres, on the surface.
-function confirmedRadius(index) {
-  const t = index == null ? 0.5 : Math.max(0, Math.min(100, index)) / 100
-  return 130_000 + t * 260_000
-}
-
 function outageRadius(score) {
   if (score >= 200) return 340_000
   if (score >= 60) return 240_000
@@ -72,22 +63,6 @@ const HOME_VIEW = { lon: 20.0, lat: 15.0, height: 20_000_000 }
 // Just above the 2000m border outlines so cable routes/landing points draw on
 // top of them rather than z-fighting at the surface.
 const CABLE_HEIGHT = 2500
-
-// The acute layer is crimson, full stop: confirmed blocks and live outages are
-// both "trouble". Reusing the confirmed-blocked status colour keeps a glow on
-// the globe meaning the same thing as the crimson status in the sidebar.
-const ACUTE_HEX = BLOCKING_STATUS_COLOR.CONFIRMED_BLOCKED ?? CRIMSON
-
-// Likely-blocked countries used to draw nothing at all, so 39 countries the
-// sidebar reported as blocked had no mark on the globe — and on the AI_ACCESS
-// layer, where only one country is confirmed, the globe looked broken. They now
-// bloom amber, reusing the same status colour the sidebar uses, so the
-// confirmed/likely distinction survives instead of being flattened or dropped.
-const LIKELY_HEX = BLOCKING_STATUS_COLOR.LIKELY_BLOCKED ?? AMBER
-
-// Likely blooms are drawn smaller as well as amber: severity reads through size
-// even for a viewer who cannot separate the two hues.
-const LIKELY_RADIUS_SCALE = 0.62
 
 // How far the cursor may sit from a satellite's projected centre and still
 // count as a hit, in pixels. Points are drawn at 2-3px, so this is deliberately
@@ -213,18 +188,17 @@ function satelliteColor(category) {
 }
 
 // `geoByCode` supplies centroids and bounding boxes for every country the
-// basemap can draw (from /api/geo). `blockingByCode` decides which of those get
-// a marker and what colour it is — the globe no longer reads sanctions_tier, so
-// the researched policy dossiers are deliberately not a prop.
+// basemap can draw (from /api/geo). Blocking status is deliberately not a prop:
+// the globe shows censorship intensity through the choropleth and live events
+// through the outage blooms, and the per-country blocking detail belongs to the
+// sidebar. The researched policy dossiers are likewise not a prop.
 export default function Globe({
-  blockingByCode = {},
   geoByCode = {},
   outages = [],
   indexByCode = {},
   showIndex = true,
   onCountrySelect,
   onLoadError,
-  layer = 'ALL',
   selectedCode = '',
   satellites = [],
   onSatelliteSelect,
@@ -239,7 +213,6 @@ export default function Globe({
   // Per-country marker state: a crimson bloom entity for each confirmed-blocked
   // country (the only visible status marks). Picking is handled by the land
   // fill, not markers, so there are no invisible pick billboards anymore.
-  const markerStateRef = useRef({})
   const outageStateRef = useRef({})
   // Choropleth: the loaded basemap geojson is stashed here in init so the
   // fill effect (which reacts to index data arriving later) can reuse it, and
@@ -582,57 +555,6 @@ export default function Globe({
       }
     }
   }, [])
-
-  // Acute status layer, rebuilt when the data or active layer changes. Only
-  // CONFIRMED blocks get a visible mark — a crimson surface bloom; everything
-  // else (likely, accessible, inconclusive) is carried by the choropleth, so
-  // the globe stops being a field of identical stickers. Picking is handled by
-  // the land fill below, so no marker is needed just to make a country clickable.
-  useEffect(() => {
-    if (!ready) return
-    const viewer = viewerRef.current
-    if (!viewer || viewer.isDestroyed()) return
-
-    const markerState = markerStateRef.current
-    for (const [code, m] of Object.entries(markerState)) {
-      if (m.bloomEntity) viewer.entities.remove(m.bloomEntity)
-      delete markerState[code]
-    }
-
-    for (const [code, entry] of Object.entries(blockingByCode)) {
-      const status = entry?.[layer] ?? 'NO_DATA'
-      const confirmed = status === 'CONFIRMED_BLOCKED'
-      const likely = status === 'LIKELY_BLOCKED'
-      if (!confirmed && !likely) continue
-
-      const geo = geoByCode[code]
-      if (!geo || geo.centroid_lon == null || geo.centroid_lat == null) continue
-
-      // A steady surface bloom, sized by the composite index for hierarchy.
-      // Sits at 3000 m and hugs the surface, so it reads as signal radiating
-      // off the country rather than a pin standing on it. Full-alpha material
-      // lets the hot core carry the brightness, and it carries the country code
-      // so clicking the bloom selects, just like clicking the land.
-      const radius =
-        confirmedRadius(indexByCode[code]) * (confirmed ? 1 : LIKELY_RADIUS_SCALE)
-      const bloomEntity = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(geo.centroid_lon, geo.centroid_lat),
-        properties: { code },
-        ellipse: {
-          semiMajorAxis: radius,
-          semiMinorAxis: radius,
-          height: 3000,
-          material: new Cesium.ImageMaterialProperty({
-            image: bloomCanvas(confirmed ? ACUTE_HEX : LIKELY_HEX),
-            transparent: true,
-            color: Cesium.Color.WHITE,
-          }),
-        },
-      })
-
-      markerState[code] = { bloomEntity }
-    }
-  }, [ready, blockingByCode, geoByCode, indexByCode, layer])
 
   // Global internet-outage overlay, rebuilt whenever the active-outage set
   // changes. Independent of the blocking markers so it can light up any country
