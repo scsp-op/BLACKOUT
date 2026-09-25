@@ -133,9 +133,10 @@ export async function getMessaging(countryCode) {
 // orbital elements. Computed fresh on every call — there is no server-side
 // position cache — so the caller is expected to poll this every 5-10s for
 // satellites that visibly move, rather than fetching it once. `category`
-// omitted/falsy fetches every tracked object ("All Satellites"); the space-
-// tracking legend is single-select, so this only ever takes one category, not
-// a list. The response also carries `total`/`category_counts` computed over
+// omitted/falsy fetches every tracked object ("All Satellites"). The legend is
+// single-select, but a row may stand for several backend categories (the
+// derived "Other / Unclassified" bucket), so this takes either one category or
+// a comma-separated list — the backend splits on commas either way. The response also carries `total`/`category_counts` computed over
 // the whole catalog regardless of this filter, so a caller can show a live
 // count on every legend row, not just the one currently selected.
 export async function getSatellites(category) {

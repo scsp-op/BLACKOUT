@@ -1,11 +1,12 @@
-import { BORDER, HIGHLIGHT, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, WHITE } from '../theme'
 
 // Single source of truth for the satellite category taxonomy — the backend
 // tags each object with one of these keys (see backend/src/fetchers/
-// satellites.rs's DEFAULT_GROUPS) plus two background-only tags ('geo',
-// 'other') that aren't given their own row here but are still reachable via
-// "All Satellites". Globe.jsx and SatelliteCard.jsx import from here instead
-// of keeping their own separate copies of the taxonomy.
+// satellites.rs's DEFAULT_GROUPS). Anything the backend tags with a key that
+// has no row here (by default 'geo' and 'other') is gathered into the derived
+// "Other / Unclassified" row below, so the rows always sum to the catalog
+// total. Globe.jsx and SatelliteCard.jsx import from here instead of keeping
+// their own separate copies of the taxonomy.
 export const SPACE_TRACKING_OPTIONS = [
   { key: 'starlink', label: 'Starlink / Comms' },
   { key: 'military', label: 'Military / Intel' },
@@ -17,8 +18,8 @@ export const SPACE_TRACKING_OPTIONS = [
 // One distinct, thematically-grouped colour per category — deliberately more
 // vivid than the app's muted dashboard palette (theme.js), which is tuned for
 // text/chrome rather than for telling small dots apart at a glance. `geo`/
-// `other` are background-only categories (no dedicated row below, reachable
-// only via "All Satellites"), so they get muted, non-competing neutrals.
+// `other` are background categories shown together in the derived
+// "Other / Unclassified" row, so they get muted, non-competing neutrals.
 export const CATEGORY_COLOR_HEX = {
   starlink: '#38bdf8', // sky blue — comms/signal
   navigation: '#fbbf24', // amber/gold — GPS/guidance
@@ -29,7 +30,34 @@ export const CATEGORY_COLOR_HEX = {
   other: '#64748b', // darker slate — background-only
 }
 
-function Row({ active, color, label, count, onClick }) {
+const NAMED_KEYS = new Set(SPACE_TRACKING_OPTIONS.map((o) => o.key))
+
+// The backend's category set is configurable (SATELLITE_GROUPS), so the
+// leftover bucket is derived from whatever `category_counts` actually returns
+// rather than hardcoding 'geo,other'. That keeps the rows summing to `total`
+// even if a new category is configured server-side without a row here. The
+// fallback only matters on the first paint, before any counts have arrived.
+const BACKGROUND_FALLBACK = ['geo', 'other']
+
+function backgroundKeysFrom(counts) {
+  const found = Object.keys(counts)
+    .filter((k) => k !== 'total' && !NAMED_KEYS.has(k))
+    .sort()
+  return found.length ? found : BACKGROUND_FALLBACK
+}
+
+// The panel's only rule: separates the catalog-wide total from the
+// per-category breakdown so the list reads as a whole and its parts rather
+// than six sibling filters. The title needs no rule of its own — spacing
+// already sets it apart, and a second line made the panel look striped.
+const RowDivider = () => (
+  <span aria-hidden="true" style={{ height: 1, background: BORDER, margin: '3px 0' }} />
+)
+
+// `hollow` marks the aggregate row: "All Satellites" is not a category, so it
+// gets a ring rather than a filled swatch and stops implying that white is a
+// colour in the taxonomy.
+function Row({ active, color, label, count, onClick, hollow }) {
   return (
     <button
       type="button"
@@ -40,9 +68,14 @@ function Row({ active, color, label, count, onClick }) {
         alignItems: 'center',
         gap: 6,
         width: '100%',
-        background: 'transparent',
+        // Selection reads as a highlighted row with a bar in the row's own
+        // colour, which works identically on every row and says *which* layer
+        // is live. The previous ring around the swatch rendered as a radio
+        // target at twice the weight of the other rows and broke the rhythm.
+        background: active ? RAISED : 'transparent',
         border: 'none',
-        padding: '2px 0',
+        borderLeft: `2px solid ${active ? color : 'transparent'}`,
+        padding: '2px 0 2px 5px',
         cursor: 'pointer',
         textAlign: 'left',
       }}
@@ -53,9 +86,9 @@ function Row({ active, color, label, count, onClick }) {
           width: 6,
           height: 6,
           borderRadius: '50%',
-          background: color,
+          background: hollow ? 'transparent' : color,
+          boxShadow: hollow ? `inset 0 0 0 1.5px ${color}` : 'none',
           flexShrink: 0,
-          boxShadow: active ? `0 0 0 2px ${SIDEBAR}, 0 0 0 3px ${color}` : 'none',
         }}
       />
       <span
@@ -70,7 +103,9 @@ function Row({ active, color, label, count, onClick }) {
       >
         {label}
       </span>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: active ? WHITE : MUTED }}>
+      {/* paddingLeft, not a bigger row `gap`: the gap also sits between the
+          swatch and the label, and only this column needs the breathing room. */}
+      <span style={{ fontFamily: MONO, fontSize: 9, paddingLeft: 8, color: active ? WHITE : MUTED }}>
         {count.toLocaleString()}
       </span>
     </button>
@@ -85,6 +120,10 @@ function Row({ active, color, label, count, onClick }) {
 // fetched — so the whole list stays populated even while viewing one narrow
 // category.
 export default function SatelliteLegend({ selection, onSelect, counts }) {
+  const backgroundKeys = backgroundKeysFrom(counts)
+  const backgroundSelection = backgroundKeys.join(',')
+  const backgroundCount = backgroundKeys.reduce((n, k) => n + (counts[k] ?? 0), 0)
+
   return (
     <div
       style={{
@@ -99,7 +138,11 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
-        width: 196,
+        // Sized off the longest row, "Stations / Telescopes" (132px at MONO
+        // 10px/0.03em), plus room for a 4-digit count. At the previous 196px
+        // the widest label and a 5-digit count summed to exactly the space
+        // available, so the two columns touched.
+        width: 208,
         zIndex: 5,
       }}
     >
@@ -108,7 +151,7 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 1,
+          marginBottom: 6,
         }}
       >
         <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
@@ -123,7 +166,9 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
             alignItems: 'center',
             gap: 4,
             background: 'transparent',
-            border: `1px solid ${selection === 'none' ? HIGHLIGHT : BORDER}`,
+            // Transparent until active: two boxed elements in a 196px header
+            // row had the clear-layer button competing with the panel title.
+            border: `1px solid ${selection === 'none' ? HIGHLIGHT : 'transparent'}`,
             color: selection === 'none' ? HIGHLIGHT : MUTED,
             fontFamily: MONO,
             fontSize: 9,
@@ -138,11 +183,14 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
 
       <Row
         active={selection === 'all'}
-        color={WHITE}
+        color={selection === 'all' ? WHITE : MUTED}
+        hollow
         label="All Satellites"
         count={counts.total ?? 0}
         onClick={() => onSelect('all')}
       />
+      <RowDivider />
+
       {SPACE_TRACKING_OPTIONS.map(({ key, label }) => (
         <Row
           key={key}
@@ -153,6 +201,24 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
           onClick={() => onSelect(key)}
         />
       ))}
+
+      {/* Everything the backend tags outside the five rows above. The key is a
+          comma-separated list because /api/satellites takes one (see
+          SatellitesQuery.categories), so this row filters the globe like any
+          other. One swatch stands for both background neutrals — they are two
+          near-identical slates by design.
+
+          Labelled "Other", not "Unclassified": the bucket includes `geo`,
+          which is a real classification, and on a tool that lists "Military /
+          Intel" two rows up, "unclassified" reads as a security marking rather
+          than "uncategorised". */}
+      <Row
+        active={selection === backgroundSelection}
+        color={CATEGORY_COLOR_HEX.geo}
+        label="Other"
+        count={backgroundCount}
+        onClick={() => onSelect(backgroundSelection)}
+      />
     </div>
   )
 }
