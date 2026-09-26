@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import MethodologyDoc from './MethodologyDoc'
 import { getMethodologyIndex } from '../lib/api'
-import { linkProps } from '../lib/router'
+import { globePath, linkProps } from '../lib/router'
 import { splitNumber } from '../lib/toc'
 import { BASE, BORDER, BORDER_STRONG, CYAN, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
@@ -183,7 +183,7 @@ export default function Methodology({ path }) {
         `}</style>
 
         <a
-          {...linkProps('/')}
+          {...linkProps(globePath())}
           style={{
             fontFamily: SANS,
             fontWeight: 600,
@@ -222,7 +222,7 @@ export default function Methodology({ path }) {
         </a>
 
         <a
-          {...linkProps('/')}
+          {...linkProps(globePath())}
           className="methodology-nav"
           style={{
             marginLeft: 'auto',

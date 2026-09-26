@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Globe from './components/Globe'
 import CountrySidebar from './components/CountrySidebar'
 import OutageFeed from './components/OutageFeed'
@@ -26,6 +26,10 @@ import {
 } from './lib/api'
 import { BASE, BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE } from './theme'
 import './App.css'
+import { navigate, useRoute } from './lib/router'
+
+// A shareable country link: /country/IR (case-insensitive).
+const COUNTRY_PATH = /^\/country\/([a-z]{2})$/i
 
 // Widths of the floating dock columns: left (Space Tracking + Ranking) and
 // right (Outages — the least essential panel, so the narrowest).
@@ -56,7 +60,17 @@ export default function App() {
   const [countries, setCountries] = useState([])
   const [blocking, setBlocking] = useState(null)
   const [countriesError, setCountriesError] = useState('')
-  const [selectedCode, setSelectedCode] = useState('')
+  // The URL is the source of truth for the selected country: selecting one
+  // pushes /country/XX, so a country view can be shared or bookmarked, survives
+  // a refresh, and Back/Forward step between the countries viewed. On a
+  // /methodology path the documents cover the globe, so the last globe
+  // selection is kept underneath rather than cleared.
+  const path = useRoute()
+  const onDocs = path === '/methodology' || path.startsWith('/methodology/')
+  const lastCodeRef = useRef('')
+  if (!onDocs) lastCodeRef.current = path.match(COUNTRY_PATH)?.[1].toUpperCase() ?? ''
+  const selectedCode = lastCodeRef.current
+  const setSelectedCode = useCallback((code) => navigate(code ? `/country/${code}` : '/'), [])
   // Which header-dock panels are open. Independent of each other (ranking and
   // satellites dock on the left, outages on the right) and of the country
   // sidebar; all closed on load so the globe starts uncovered.
@@ -489,6 +503,24 @@ export default function App() {
       cancelled = true
     }
   }, [selectedCode])
+
+  // A /country/XX link for a code the map doesn't know (a typo, a stale link)
+  // falls back to the bare globe instead of an empty sidebar. Waits for the
+  // geo list, and replaces rather than pushes so Back doesn't return to it.
+  // A lowercase link (/country/ir) is rewritten to the canonical uppercase
+  // form, so copied links are consistent.
+  useEffect(() => {
+    if (onDocs || !selectedCode) return
+    if (geo.length > 0 && !geoByCode[selectedCode]) navigate('/', { replace: true })
+    else if (path !== `/country/${selectedCode}`) navigate(`/country/${selectedCode}`, { replace: true })
+  }, [onDocs, path, selectedCode, geo, geoByCode])
+
+  // Name the tab after the open country, so bookmarks and tab strips say what
+  // they are.
+  useEffect(() => {
+    const name = geoByCode[selectedCode]?.country_name
+    document.title = name ? `${name} · BLACKOUT` : 'BLACKOUT'
+  }, [selectedCode, geoByCode])
 
   const statusMessage = countriesError || selectionError || globeError
     || (isLoadingCountries && 'Loading country data...')
