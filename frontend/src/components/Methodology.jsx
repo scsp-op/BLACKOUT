@@ -3,7 +3,7 @@ import MethodologyDoc from './MethodologyDoc'
 import { getMethodologyIndex } from '../lib/api'
 import { linkProps } from '../lib/router'
 import { splitNumber } from '../lib/toc'
-import { BASE, BORDER, BORDER_STRONG, CYAN, DIM, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, WHITE } from '../theme'
+import { BASE, BORDER, BORDER_STRONG, CYAN, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // The documents render over the globe rather than in place of it: App owns a
 // Cesium viewer and roughly a dozen mount-time fetches, and tearing that down
@@ -52,10 +52,10 @@ function DocPanel({ doc }) {
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.1em', color: WHITE }}>
           {doc.kind}
         </span>
-        <span className="tabular" style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', color: MUTED }}>
+        <span className="tabular" style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.08em', color: MUTED }}>
           {doc.sections.length} SECTIONS · {doc.word_count.toLocaleString()} WORDS
         </span>
       </div>
@@ -78,7 +78,7 @@ function DocPanel({ doc }) {
             <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 12px' }}>
               <span
                 className="tabular"
-                style={{ fontFamily: MONO, fontSize: 10.5, width: 18, flexShrink: 0, color: DIM, paddingTop: 1 }}
+                style={{ fontFamily: MONO, fontSize: TYPE.label, width: 18, flexShrink: 0, color: MUTED, paddingTop: 1 }}
               >
                 {number ?? ''}
               </span>
@@ -227,7 +227,7 @@ export default function Methodology({ path }) {
           style={{
             marginLeft: 'auto',
             fontFamily: MONO,
-            fontSize: 10.5,
+            fontSize: TYPE.label,
             letterSpacing: '0.12em',
             color: MUTED,
             textDecoration: 'none',

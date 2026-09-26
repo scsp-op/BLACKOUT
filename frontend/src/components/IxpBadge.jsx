@@ -1,4 +1,4 @@
-import { MONO, MUTED, WHITE } from '../theme'
+import { MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // Structural chokepoint signal, not a live measurement (see backend/data/
 // seed/ixp_stats.json, generated once by gen_ixp_data.mjs) — a country with
@@ -18,10 +18,10 @@ export default function IxpBadge({ entry }) {
 
   return (
     <div style={{ border: `1px solid ${MUTED}33`, padding: '4px 8px' }}>
-      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.05em', color: WHITE }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.05em', color: WHITE }}>
         INTERNET EXCHANGE POINTS: {ixpCount}
       </div>
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, marginTop: 2 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, marginTop: 2 }}>
         {netCount} network{netCount === 1 ? '' : 's'} connected
         {largestName ? ` · largest: ${largestName} (${largestNet})` : ''}
         {' · via PeeringDB, manually refreshed'}

@@ -9,7 +9,7 @@ import {
   YAxis,
   ZAxis,
 } from 'recharts'
-import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const HEIGHT = 150
 
@@ -28,7 +28,7 @@ function OutageTooltip({ active, payload }) {
   if (!active || !payload || !payload.length) return null
   const p = payload[0].payload
   return (
-    <div style={{ background: SIDEBAR, border: `1px solid ${BORDER}`, padding: '6px 8px', fontFamily: MONO, fontSize: 10 }}>
+    <div style={{ background: SIDEBAR, border: `1px solid ${BORDER}`, padding: '6px 8px', fontFamily: MONO, fontSize: TYPE.label }}>
       <div style={{ color: WHITE }}>{new Date(p.t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
       <div style={{ color: MUTED }}>severity {Math.round(p.score)} · {formatDuration(p.durationSecs)}</div>
       <div style={{ color: MUTED }}>source: {p.datasource}</div>
@@ -81,7 +81,7 @@ export default function OutageTimeline({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         INTERNET OUTAGES (90D)
       </div>
       <div style={{ width: '100%', height: HEIGHT }}>
@@ -92,9 +92,11 @@ export default function OutageTimeline({ countryCode }) {
               type="number"
               dataKey="t"
               domain={[min, max]}
-              ticks={[min, max]}
+              // One label when every outage falls on the same day — two
+              // identical dates would otherwise draw on top of each other.
+              ticks={formatDay(min) === formatDay(max) ? [min] : [min, max]}
               tickFormatter={formatDay}
-              tick={{ fill: MUTED, fontSize: 8, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
             />
@@ -102,10 +104,10 @@ export default function OutageTimeline({ countryCode }) {
               type="number"
               dataKey="score"
               name="severity"
-              tick={{ fill: MUTED, fontSize: 8, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
-              width={32}
+              width={38}
             />
             <ZAxis type="number" dataKey="durationSecs" range={[24, 180]} />
             <Tooltip content={<OutageTooltip />} cursor={{ stroke: BORDER }} />
@@ -113,7 +115,7 @@ export default function OutageTimeline({ countryCode }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', marginTop: 2 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 2 }}>
         {points.length} outage{points.length === 1 ? '' : 's'} detected
         {severe > 0 && ` · ${severe} severe`} · via IODA
       </div>

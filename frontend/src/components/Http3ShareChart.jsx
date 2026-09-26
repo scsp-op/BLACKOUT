@@ -8,11 +8,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CYAN, DIM, MONO, MUTED, SIDEBAR, US_EXPOSURE, WHITE } from '../theme'
+import { BORDER, CYAN, DIM, MONO, MUTED, SIDEBAR, TYPE, US_EXPOSURE, WHITE } from '../theme'
 
 // Same thinning approach as TorChart.jsx: one tick per month, capped so
-// labels don't collide in a 380px sidebar.
-const MAX_TICKS = 6
+// labels don't collide in a 360px sidebar.
+const MAX_TICKS = 5
 
 function monthlyTicks(rows) {
   const seen = new Set()
@@ -81,7 +81,7 @@ export default function Http3ShareChart({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         HTTP/3 (QUIC) TRAFFIC SHARE
       </div>
       <div style={{ width: '100%', height: 140 }}>
@@ -92,20 +92,25 @@ export default function Http3ShareChart({ countryCode }) {
               dataKey="date"
               ticks={ticks}
               tickFormatter={(d) => d.slice(0, 7)}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
             />
             <YAxis
+              // The three protocol shares are rounded upstream and can sum to a
+              // hair over 100, which made Recharts stretch the domain to
+              // 100.0001 and print that as the top tick. Pin both.
               domain={[0, 100]}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              allowDataOverflow
+              ticks={[0, 25, 50, 75, 100]}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
-              width={32}
+              width={38}
               unit="%"
             />
             <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: 11, fontFamily: MONO }}
+              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
               labelStyle={{ color: WHITE }}
               itemStyle={{ color: MUTED }}
               formatter={(value) => `${value.toFixed(2)}%`}
@@ -148,7 +153,7 @@ export default function Http3ShareChart({ countryCode }) {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: 9 }}>
+      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: TYPE.label }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div style={{ width: 8, height: 8, background: DIM, flexShrink: 0 }} />
           <span style={{ color: MUTED }}>HTTP/1.x</span>
@@ -163,7 +168,7 @@ export default function Http3ShareChart({ countryCode }) {
         </div>
       </div>
 
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
         latest: {(latest.http3_pct ?? 0).toFixed(2)}% HTTP/3 on {latest.date} · via Cloudflare Radar
       </div>
     </section>

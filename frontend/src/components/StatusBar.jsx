@@ -1,4 +1,4 @@
-import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { SOURCES } from '../lib/sources'
 import { linkProps } from '../lib/router'
 
@@ -61,8 +61,9 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
         background: SIDEBAR,
         borderTop: `1px solid ${BORDER}`,
         fontFamily: MONO,
-        fontSize: 9,
-        letterSpacing: '0.08em',
+        fontSize: TYPE.tick,
+        letterSpacing: '0.05em',
+        whiteSpace: 'nowrap',
       }}
     >
       {/* Inline rather than in App.css because it is the only rule this

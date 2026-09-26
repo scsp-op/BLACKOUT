@@ -1,4 +1,4 @@
-import { AMBER, CRIMSON, MONO, MUTED, WHITE } from '../theme'
+import { AMBER, CRIMSON, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // BANNED = Starlink's own GPS-geofence; JAMMED/RESTRICTED share a color
 // (differentiated by label, not a new theme color) since both mean "not a
@@ -33,10 +33,10 @@ export default function StarlinkBadge({ entry }) {
     >
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 4 }} />
       <div>
-        <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.05em', color: WHITE }}>
+        <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.05em', color: WHITE }}>
           STARLINK: {entry.status}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, marginTop: 2 }}>
+        <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, marginTop: 2 }}>
           {entry.note} · {entry.source_note}
         </div>
       </div>

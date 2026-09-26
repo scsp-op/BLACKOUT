@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MONO, MUTED, WHITE } from '../theme'
+import { MONO, MUTED, TYPE, WHITE } from '../theme'
 
 export default function CollapsibleSection({ title, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -21,8 +21,8 @@ export default function CollapsibleSection({ title, defaultOpen = false, childre
           marginBottom: open ? 8 : 0,
           cursor: 'pointer',
           fontFamily: MONO,
-          fontSize: 10,
-          letterSpacing: '0.1em',
+          fontSize: TYPE.label,
+          letterSpacing: '0.06em',
           color: MUTED,
         }}
       >

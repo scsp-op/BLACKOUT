@@ -1,4 +1,4 @@
-import { BORDER, HIGHLIGHT, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, HIGHLIGHT, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // Matches the globe choropleth ramp in Globe.jsx (green → amber → crimson).
 const RAMP = 'linear-gradient(90deg, #6c9a5b 0%, #d97706 50%, #b31942 100%)'
@@ -20,14 +20,14 @@ export default function IndexLegend({ show, onToggle }) {
         whiteSpace: 'nowrap',
       }}
     >
-      <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
+      <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: WHITE }}>
         CENSORSHIP INDEX
       </span>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: show ? 1 : 0.4 }}>
-        <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>Free</span>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>Free</span>
         <div style={{ width: 120, height: 8, background: RAMP, border: `1px solid ${BORDER}` }} />
-        <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>Censored</span>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>Censored</span>
       </div>
 
       <button
@@ -39,7 +39,7 @@ export default function IndexLegend({ show, onToggle }) {
           border: `1px solid ${show ? HIGHLIGHT : BORDER}`,
           color: show ? HIGHLIGHT : MUTED,
           fontFamily: MONO,
-          fontSize: 9,
+          fontSize: TYPE.label,
           letterSpacing: '0.08em',
           padding: '2px 8px',
           cursor: 'pointer',
@@ -50,7 +50,7 @@ export default function IndexLegend({ show, onToggle }) {
 
       {/* The composite is V-Dem + RSF only — see backend/src/api/censorship_index.rs.
           No Freedom House data is fetched, stored or weighted anywhere in the system. */}
-      <span style={{ fontFamily: MONO, fontSize: 8, color: MUTED }}>V-Dem · RSF blend</span>
+      <span style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED }}>V-Dem · RSF blend</span>
     </div>
   )
 }

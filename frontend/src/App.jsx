@@ -8,6 +8,7 @@ import CableLegend from './components/CableLegend'
 import SatelliteLegend from './components/SatelliteLegend'
 import SatelliteCard from './components/SatelliteCard'
 import CommandBar from './components/CommandBar'
+import { DockColumn, DockPanel } from './components/DockPanels'
 import StatusBar from './components/StatusBar'
 import { buildBlockingMap } from './lib/blockingRegistry'
 import {
@@ -23,8 +24,15 @@ import {
   getSatelliteOrbit,
   getStarlinkStatus,
 } from './lib/api'
-import { BASE, BORDER, MONO, MUTED, SIDEBAR } from './theme'
+import { BASE, BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE } from './theme'
 import './App.css'
+
+// Widths of the floating dock columns: left (Space Tracking + Ranking) and
+// right (Outages — the least essential panel, so the narrowest).
+const LEFT_DOCK_WIDTH = 280
+const RIGHT_DOCK_WIDTH = 240
+// Gap between a dock column and the edge of <main> / the globe.
+const DOCK_GAP = 12
 
 // How often the client re-fetches satellite positions. The backend computes
 // them fresh on every request (no server-side position cache), so this
@@ -49,6 +57,18 @@ export default function App() {
   const [blocking, setBlocking] = useState(null)
   const [countriesError, setCountriesError] = useState('')
   const [selectedCode, setSelectedCode] = useState('')
+  // Which header-dock panels are open. Independent of each other (ranking and
+  // satellites dock on the left, outages on the right) and of the country
+  // sidebar; all closed on load so the globe starts uncovered.
+  const [openPanels, setOpenPanels] = useState({ ranking: false, outages: false, satellites: false })
+  const leftDockOpen = openPanels.ranking || openPanels.satellites
+  // Centre the globe in the gap between whichever dock columns are open:
+  // shift it by half the difference of the room each side takes.
+  const leftDockExtent = leftDockOpen ? DOCK_GAP + LEFT_DOCK_WIDTH + DOCK_GAP : 0
+  const rightDockExtent = openPanels.outages ? DOCK_GAP + RIGHT_DOCK_WIDTH + DOCK_GAP : 0
+  const globeOffsetX = (leftDockExtent - rightDockExtent) / 2
+  const togglePanel = (id) => setOpenPanels((p) => ({ ...p, [id]: !p[id] }))
+  const closePanel = (id) => setOpenPanels((p) => ({ ...p, [id]: false }))
   const [selectedCountry, setSelectedCountry] = useState(null)
   const [selectionError, setSelectionError] = useState('')
   const [globeError, setGlobeError] = useState('')
@@ -492,10 +512,15 @@ export default function App() {
         selectedCode={selectedCode}
         onSelectCountry={setSelectedCode}
         counts={counts}
+        openPanels={openPanels}
+        onTogglePanel={togglePanel}
+        onCloseAll={() => setOpenPanels({ ranking: false, outages: false, satellites: false })}
       />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+        {/* A size container so .globe-legends (index.css) can step aside
+            when the country sidebar squeezes the globe area too narrow for it. */}
+        <main style={{ position: 'relative', flex: 1, overflow: 'hidden', containerType: 'inline-size' }}>
           <Globe
             geoByCode={geoByCode}
             outages={outages}
@@ -511,6 +536,7 @@ export default function App() {
             satelliteOrbit={satelliteOrbit}
             cables={cables}
             showCables={showCables}
+            offsetX={globeOffsetX}
           />
 
           {/* Vignette: darkens the globe-area corners to focus the eye and add
@@ -526,72 +552,90 @@ export default function App() {
             }}
           />
 
-          <OutageFeed outages={outages} />
-
-          <GlobalRanking />
-
-          {/* Centered as one group so the pair's combined width — not
-              either panel's individually — is what centers at the bottom.
-              Bounded to the region right of GlobalRanking (left:288 = its
-              own left:12 + 264px width + a 12px gap), not the full viewport
-              width — a plain 50% center ignored that GlobalRanking occupies
-              a fixed column on the left, so on narrower windows this group
-              centered enough to overlap the bottom of that list. Bounding +
-              centering within the remaining space fixes that at any width,
-              rather than a fixed pixel nudge that would only hold at one
-              specific window size.
-
-              `position: fixed` (viewport-relative) rather than `absolute`
-              (relative to <main>) is deliberate: <main> is a flex sibling of
-              the country sidebar and shrinks by the sidebar's width whenever
-              one is open, which shifted this group visibly left every time a
-              country was selected. Fixed positioning is anchored to the
-              window instead, so it holds the same spot on screen regardless
-              of sidebar state — `bottom: 36` reproduces the same visual
-              offset as the old `bottom: 12` inside <main> once the 24px
-              StatusBar footer below <main> is accounted for.
-
-              `right: 392` permanently reserves the country sidebar's width
-              (380px + a 12px gap), the same way `left: 288` permanently
-              reserves GlobalRanking's — even though the sidebar, unlike
-              GlobalRanking, isn't always mounted. Since this group no longer
-              re-centers when the sidebar opens (see above), splitting the
-              difference between "centered when closed" and "clear of the
-              sidebar when open" isn't possible with one static position;
-              always reserving the space is the option that never overlaps,
-              at the cost of sitting slightly left of true-center while the
-              sidebar is closed. */}
+          {/* Censorship index + submarine cables: the bottom-centre pair, as
+              before the dock existed. Centered as one group so the pair's
+              combined width — not either panel's — is what centers, and
+              inside <main> so it stays centered under the globe when the
+              country sidebar opens. Dock panels float over <main> rather than
+              resizing it, so opening them never moves this pair. `wrap-reverse`
+              stacks the pair upward when <main> gets too narrow for both,
+              and below the width of one it hides (see .globe-legends). */}
           <div
+            className="globe-legends"
             style={{
-              position: 'fixed',
-              bottom: 36,
-              left: 288,
-              right: 392,
+              position: 'absolute',
+              bottom: 12,
+              // 8px side margins and gap (not 12) so the pair (~858px) still
+              // fits on one row when the country sidebar leaves <main> 880px
+              // wide at a 1280 window, instead of wrapping Cables upward.
+              left: 8,
+              right: 8,
               display: 'flex',
+              flexWrap: 'wrap-reverse',
               justifyContent: 'center',
-              gap: 12,
+              gap: 8,
               zIndex: 5,
+              pointerEvents: 'none',
             }}
           >
-            <IndexLegend show={showIndex} onToggle={() => setShowIndex((v) => !v)} />
-            <CableLegend
-              show={showCables}
-              onToggle={() => setShowCables((v) => !v)}
-              routeCount={cables.routes.length}
-              landingCount={cables.landing_points.length}
-            />
+            <div style={{ pointerEvents: 'auto' }}>
+              <IndexLegend show={showIndex} onToggle={() => setShowIndex((v) => !v)} />
+            </div>
+            <div style={{ pointerEvents: 'auto' }}>
+              <CableLegend
+                show={showCables}
+                onToggle={() => setShowCables((v) => !v)}
+                routeCount={cables.routes.length}
+                landingCount={cables.landing_points.length}
+              />
+            </div>
           </div>
 
-          <SatelliteLegend
-            selection={spaceTrackingSelection}
-            onSelect={setSpaceTrackingSelection}
-            counts={spaceTrackingCounts}
-          />
+          {/* Dock panels: floating columns at the globe's left and right
+              edges, like the panels before the dock (see DockColumn). */}
+          {leftDockOpen && (
+            <DockColumn side="left" width={LEFT_DOCK_WIDTH}>
+              {openPanels.satellites && (
+                <DockPanel title="SPACE TRACKING" onClose={() => closePanel('satellites')}>
+                  <SatelliteLegend
+                    selection={spaceTrackingSelection}
+                    onSelect={setSpaceTrackingSelection}
+                    counts={spaceTrackingCounts}
+                  />
+                </DockPanel>
+              )}
+              {openPanels.ranking && (
+                <DockPanel title="MOST CENSORED COUNTRIES" onClose={() => closePanel('ranking')} grow>
+                  <GlobalRanking />
+                </DockPanel>
+              )}
+            </DockColumn>
+          )}
+          {openPanels.outages && (
+            // The least essential panel, so the narrowest, and capped at ~12
+            // rows before it scrolls rather than running the full height.
+            <DockColumn side="right" width={RIGHT_DOCK_WIDTH} cap={360}>
+              <DockPanel
+                title="INTERNET OUTAGES"
+                accessory={
+                  <span className="tabular" style={{ fontFamily: MONO, fontSize: TYPE.label, color: outages.length ? CRIMSON : MUTED }}>
+                    {outages.length}
+                  </span>
+                }
+                onClose={() => closePanel('outages')}
+                grow
+              >
+                <OutageFeed outages={outages} />
+              </DockPanel>
+            </DockColumn>
+          )}
 
           <SatelliteCard
             satellite={selectedSatellite}
             periodMinutes={satelliteOrbit?.period_minutes}
             onClose={() => setSelectedSatelliteId(null)}
+            // Beside the left dock column when it's open, not under it.
+            left={leftDockOpen ? leftDockExtent : DOCK_GAP}
           />
 
           {statusMessage && (
@@ -604,7 +648,7 @@ export default function App() {
                 border: `1px solid ${BORDER}`,
                 padding: '6px 10px',
                 fontFamily: MONO,
-                fontSize: 10,
+                fontSize: TYPE.label,
                 letterSpacing: '0.05em',
                 color: MUTED,
               }}
@@ -620,7 +664,7 @@ export default function App() {
             refetched country-independent data like /api/models on every
             selection. */}
         {selectedCode && (
-          <aside style={{ width: 380, flexShrink: 0, height: '100%', overflow: 'hidden' }}>
+          <aside style={{ width: 360, flexShrink: 0, height: '100%', overflow: 'hidden' }}>
             {sidebarCountry ? (
               <CountrySidebar
                 country={sidebarCountry}
@@ -644,7 +688,7 @@ export default function App() {
                   justifyContent: 'center',
                   textAlign: 'center',
                   padding: '0 24px',
-                  fontSize: 13,
+                  fontSize: TYPE.body,
                   color: MUTED,
                 }}
               >

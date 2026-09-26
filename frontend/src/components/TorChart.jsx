@@ -11,16 +11,16 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, US_EXPOSURE, WHITE } from '../theme'
+import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE, US_EXPOSURE, WHITE } from '../theme'
 
 // Most labels this axis will ever draw.
 //
 // One tick per month was already a big reduction from one per day, but the
 // series spans ~2.5 years, so it still produced 31 labels. Recharts renders
 // every tick handed to it explicitly — it does not thin them — and 31 ×
-// "2026-07" cannot fit the 380px sidebar, so they collided and clipped. Six is
-// what reads cleanly at this width.
-const MAX_TICKS = 6
+// "2026-07" cannot fit the 360px sidebar, so they collided and clipped. Five is
+// what reads cleanly between this chart's two y-axes at that width.
+const MAX_TICKS = 5
 
 // One tick per month, then thinned to at most MAX_TICKS by taking every Nth.
 // The last month is always kept: the right edge is where the eye lands to ask
@@ -138,7 +138,7 @@ export default function TorChart({ countryCode }) {
 
   return (
     <section style={{ width: '100%' }}>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         TOR RELAY / BRIDGE USERS
       </div>
       <div style={{ width: '100%', height: 180 }}>
@@ -151,27 +151,27 @@ export default function TorChart({ countryCode }) {
               dataKey="date"
               ticks={ticks}
               tickFormatter={(d) => d.slice(0, 7)}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
             />
             <YAxis
               yAxisId="relay"
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
-              width={40}
+              width={44}
             />
             <YAxis
               yAxisId="bridge"
               orientation="right"
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
-              width={40}
+              width={44}
             />
             <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: 11, fontFamily: MONO }}
+              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
               labelStyle={{ color: WHITE }}
               itemStyle={{ color: MUTED }}
             />
@@ -222,7 +222,7 @@ export default function TorChart({ countryCode }) {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: 9 }}>
+      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: TYPE.label }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div style={{ width: 8, height: 8, background: US_EXPOSURE, flexShrink: 0 }} />
           <span style={{ color: MUTED }}>Relay users (direct)</span>
@@ -234,7 +234,7 @@ export default function TorChart({ countryCode }) {
       </div>
 
       {transportRow && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 6, fontFamily: MONO, fontSize: 9 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 6, fontFamily: MONO, fontSize: TYPE.label }}>
           {TRANSPORTS.map((t) => {
             const value = midpoint(transportRow[t.low], transportRow[t.high])
             if (value == null) return null

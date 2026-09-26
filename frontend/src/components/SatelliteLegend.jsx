@@ -1,4 +1,4 @@
-import { BORDER, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, HIGHLIGHT, MONO, MUTED, RAISED, TYPE, WHITE } from '../theme'
 
 // Single source of truth for the satellite category taxonomy — the backend
 // tags each object with one of these keys (see backend/src/fetchers/
@@ -94,7 +94,7 @@ function Row({ active, color, label, count, onClick, hollow }) {
       <span
         style={{
           fontFamily: MONO,
-          fontSize: 10,
+          fontSize: TYPE.label,
           letterSpacing: '0.03em',
           color: active ? WHITE : MUTED,
           flex: 1,
@@ -105,7 +105,7 @@ function Row({ active, color, label, count, onClick, hollow }) {
       </span>
       {/* paddingLeft, not a bigger row `gap`: the gap also sits between the
           swatch and the label, and only this column needs the breathing room. */}
-      <span style={{ fontFamily: MONO, fontSize: 9, paddingLeft: 8, color: active ? WHITE : MUTED }}>
+      <span style={{ fontFamily: MONO, fontSize: TYPE.label, paddingLeft: 8, color: active ? WHITE : MUTED }}>
         {count.toLocaleString()}
       </span>
     </button>
@@ -125,27 +125,9 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
   const backgroundCount = backgroundKeys.reduce((n, k) => n + (counts[k] ?? 0), 0)
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 12,
-        // GlobalRanking ("Most Censored Countries") occupies the whole left
-        // edge at left:12, width:264 — sit just to its right, not on top of it.
-        left: 292,
-        background: SIDEBAR,
-        border: `1px solid ${BORDER}`,
-        padding: '6px 8px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        // Sized off the longest row, "Stations / Telescopes" (132px at MONO
-        // 10px/0.03em), plus room for a 4-digit count. At the previous 196px
-        // the widest label and a 5-digit count summed to exactly the space
-        // available, so the two columns touched.
-        width: 208,
-        zIndex: 5,
-      }}
-    >
+    // Unpositioned — App renders this inside the header dock's SPACE TRACKING
+    // panel (DockPanel), which supplies the frame, title and close control.
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 10px' }}>
       <div
         style={{
           display: 'flex',
@@ -154,8 +136,8 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
           marginBottom: 6,
         }}
       >
-        <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
-          SPACE TRACKING
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED }}>
+          SHOW
         </span>
         <button
           type="button"
@@ -166,18 +148,20 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
             alignItems: 'center',
             gap: 4,
             background: 'transparent',
-            // Transparent until active: two boxed elements in a 196px header
+            // Transparent until active: two boxed elements in a narrow header
             // row had the clear-layer button competing with the panel title.
             border: `1px solid ${selection === 'none' ? HIGHLIGHT : 'transparent'}`,
             color: selection === 'none' ? HIGHLIGHT : MUTED,
             fontFamily: MONO,
-            fontSize: 9,
+            fontSize: TYPE.label,
             letterSpacing: '0.08em',
             padding: '2px 5px',
             cursor: 'pointer',
           }}
         >
-          NONE ✕
+          {/* No ✕ glyph: the panel's own close control sits just above, and
+              this one clears the layer rather than closing anything. */}
+          NONE
         </button>
       </div>
 

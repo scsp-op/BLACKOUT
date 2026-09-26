@@ -1,14 +1,14 @@
-import { useState } from 'react'
-import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { AMBER, CRIMSON, MONO, MUTED, TYPE, WHITE } from '../theme'
 
+// Compact age: "12m", "5h", "3d". The row tooltip spells it out.
 function relativeTime(unixSecs) {
   if (!unixSecs) return ''
   const diff = Date.now() / 1000 - unixSecs
   if (diff < 0) return 'now'
   const h = diff / 3600
-  if (h < 1) return `${Math.max(1, Math.round(diff / 60))}m ago`
-  if (h < 48) return `${Math.round(h)}h ago`
-  return `${Math.round(h / 24)}d ago`
+  if (h < 1) return `${Math.max(1, Math.round(diff / 60))}m`
+  if (h < 48) return `${Math.round(h)}h`
+  return `${Math.round(h / 24)}d`
 }
 
 // Compact one-line severity read from IODA's score magnitude. IODA scores are
@@ -19,109 +19,64 @@ function severityLabel(score) {
   return 'MINOR'
 }
 
+const SEVERITY_COLOR = { SEVERE: CRIMSON, MAJOR: AMBER, MINOR: MUTED }
+
+const Dot = ({ color }) => (
+  <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+)
+
+// Content only — App renders this inside the header dock's OUTAGES panel
+// (DockPanel), which supplies the frame, title, count and close control.
+// Deliberately the most compact panel, since it's the least essential: rows
+// as tight as the ranking list, severity as a coloured dot rather than a word,
+// and the ISO code / full severity / age spelled out in each row's tooltip.
 export default function OutageFeed({ outages = [] }) {
-  const [collapsed, setCollapsed] = useState(false)
-
-  if (!outages.length) return null
-
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        width: 260,
-        // 24px of margin, plus 45px to clear the index/cable legend row that
-        // sits at the bottom of the same column.
-        maxHeight: 'calc(100% - 69px)',
-        display: 'flex',
-        flexDirection: 'column',
-        background: SIDEBAR,
-        border: `1px solid ${BORDER}`,
-        zIndex: 5,
-      }}
-    >
-      <style>{`@keyframes outagePulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }`}</style>
-
-      <button
-        type="button"
-        onClick={() => setCollapsed((c) => !c)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          width: '100%',
-          background: 'transparent',
-          border: 'none',
-          borderBottom: collapsed ? 'none' : `1px solid ${BORDER}`,
-          padding: '8px 10px',
-          cursor: 'pointer',
-          textAlign: 'left',
-        }}
-      >
-        <span
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: '50%',
-            background: CRIMSON,
-            flexShrink: 0,
-            animation: 'outagePulse 1.4s ease-in-out infinite',
-          }}
-        />
-        <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
-          INTERNET OUTAGES
-        </span>
-        <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 10, color: CRIMSON }}>
-          {outages.length}
-        </span>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED }}>{collapsed ? '+' : '\u2212'}</span>
-      </button>
-
-      {!collapsed && (
-        <>
-          <div style={{ overflowY: 'auto' }}>
-            {outages.map((o) => (
-              <div
-                key={o.code}
+    <>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 0' }}>
+        {!outages.length && (
+          <p style={{ padding: '4px 10px', fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>No current outages.</p>
+        )}
+        {outages.map((o) => {
+          const severity = severityLabel(o.maxScore)
+          const age = relativeTime(o.latestStart)
+          return (
+            <div
+              key={o.code}
+              title={`${o.name} (${o.code}) · ${severity}${age ? ` · started ${age === 'now' ? 'just now' : `${age} ago`}` : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px' }}
+            >
+              <Dot color={SEVERITY_COLOR[severity]} />
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: 8,
-                  padding: '6px 10px',
-                  borderBottom: `1px solid ${BORDER}`,
+                  fontSize: TYPE.body,
+                  color: WHITE,
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, width: 22, flexShrink: 0 }}>
-                  {o.code}
-                </span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: WHITE,
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={o.name}
-                >
-                  {o.name}
-                </span>
-                <span style={{ fontFamily: MONO, fontSize: 9, color: CRIMSON, flexShrink: 0 }}>
-                  {severityLabel(o.maxScore)}
-                </span>
-                <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED, flexShrink: 0, width: 48, textAlign: 'right' }}>
-                  {relativeTime(o.latestStart)}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div style={{ padding: '6px 10px', fontFamily: MONO, fontSize: 9, color: MUTED }}>
-            Detected via IODA (BGP / active probing / telescope)
-          </div>
-        </>
-      )}
-    </div>
+                {o.name}
+              </span>
+              <span className="tabular" style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED, flexShrink: 0 }}>
+                {age}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ padding: '6px 10px', fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
+          {Object.entries(SEVERITY_COLOR).map(([label, color]) => (
+            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Dot color={color} />
+              {label.toLowerCase()}
+            </span>
+          ))}
+        </div>
+        via IODA (BGP / active probing / telescope)
+      </div>
+    </>
   )
 }

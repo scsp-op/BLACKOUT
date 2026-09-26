@@ -1,4 +1,4 @@
-import { BORDER, BORDER_STRONG, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // Static/decorative infrastructure context, not a censorship signal — a
 // single binary toggle (unlike SatelliteLegend's multi-select), default off
@@ -26,10 +26,10 @@ export default function CableLegend({ show, onToggle, routeCount, landingCount }
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.09em', color: WHITE }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: WHITE }}>
           SUBMARINE CABLES
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.03em', color: MUTED }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.tick, letterSpacing: '0.03em', color: MUTED }}>
           {routeCount} routes · {landingCount} landings
         </span>
       </div>
@@ -43,7 +43,7 @@ export default function CableLegend({ show, onToggle, routeCount, landingCount }
           border: `1px solid ${show ? HIGHLIGHT : BORDER_STRONG}`,
           color: show ? HIGHLIGHT : WHITE,
           fontFamily: MONO,
-          fontSize: 8,
+          fontSize: TYPE.tick,
           letterSpacing: '0.08em',
           padding: '4px 10px',
           minWidth: 52,

@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CRIMSON, CYAN, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, CRIMSON, CYAN, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const MAX_TICKS = 6
 
@@ -92,7 +92,7 @@ export default function BgpVisibilityChart({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         BGP PREFIX VISIBILITY
       </div>
       <div style={{ width: '100%', height: 140 }}>
@@ -103,21 +103,21 @@ export default function BgpVisibilityChart({ countryCode }) {
               dataKey="date"
               ticks={ticks}
               tickFormatter={(d) => d.slice(0, 7)}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
             />
             <YAxis
               domain={[0, 110]}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
-              width={32}
+              width={38}
               unit="%"
             />
             <ReferenceLine y={100} stroke={MUTED} strokeDasharray="3 3" />
             <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: 11, fontFamily: MONO }}
+              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
               labelStyle={{ color: WHITE }}
               itemStyle={{ color: MUTED }}
               formatter={(value) => `${value.toFixed(1)}%`}
@@ -134,7 +134,7 @@ export default function BgpVisibilityChart({ countryCode }) {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
         {chartData[chartData.length - 1].visiblePct < 50 && (
           <span style={{ color: CRIMSON }}>
             &lt;50% of registered ASNs currently visible ·{' '}

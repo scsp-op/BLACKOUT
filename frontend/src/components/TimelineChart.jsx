@@ -1,10 +1,10 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // This renders inline underneath a single technology row in the sidebar, so
 // it's deliberately a sparkline: no grid, no legend, first/last tick only.
 // The row above it already names the country and technology, and the sidebar
-// is only 380px wide.
+// is only 360px wide.
 const HEIGHT = 56
 
 // The share of measurements that came back anomalous. Raw anomaly_count is
@@ -46,7 +46,7 @@ export default function TimelineChart({ rows }) {
               dataKey="date"
               ticks={[first, last]}
               tickFormatter={(d) => d.slice(0, 7)}
-              tick={{ fill: MUTED, fontSize: 8, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
               interval="preserveStartEnd"
@@ -60,7 +60,7 @@ export default function TimelineChart({ rows }) {
                 background: SIDEBAR,
                 border: `1px solid ${BORDER}`,
                 borderRadius: 0,
-                fontSize: 10,
+                fontSize: TYPE.label,
                 fontFamily: MONO,
               }}
               labelStyle={{ color: WHITE }}
@@ -83,7 +83,7 @@ export default function TimelineChart({ rows }) {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em' }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em' }}>
         {rows.length} days · peak {peak.toFixed(0)}% anomalous
         {confirmedDays > 0 && ` · ${confirmedDays} confirmed-blocked`}
       </div>

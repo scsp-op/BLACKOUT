@@ -55,6 +55,10 @@ function outageRadius(score) {
 // so this, not a starfield texture, is what fills it).
 const SPACE_BG = '#03060a'
 
+// Cesium's default camera FOV (60°), applied to the canvas's wider axis. The
+// preRender hook in init derives the actual FOV from it (see there).
+const BASE_FOV = Math.PI / 3
+
 // Whole-globe framing, centred on ~20°E/15°N rather than 0/0 so the front
 // hemisphere on load holds Europe, Africa, the Middle East and South Asia — the
 // densest censorship geography — instead of the mid-Atlantic.
@@ -207,6 +211,10 @@ export default function Globe({
   satelliteOrbit = null,
   cables = null,
   showCables = false,
+  // Horizontal shift, in CSS px, of where the globe's centre sits within the
+  // host (<main>): App passes half the difference between the floating dock
+  // columns on each side, so the globe centres in the gap between them.
+  offsetX = 0,
 }) {
   const containerRef = useRef(null)
   const viewerRef = useRef(null)
@@ -321,6 +329,32 @@ export default function Globe({
       viewer.scene.skyBox.show = false
       viewer.scene.sun.show  = false
       viewer.scene.moon.show = false
+
+      // Keep the globe's on-screen size independent of the container's
+      // width. The container is widened past <main> to shift the globe's
+      // centre (see `offsetX` in the returned element), and Cesium applies
+      // `frustum.fov` to the wider axis — so a wider canvas would shrink the
+      // globe. Each frame, pin the vertical FOV to what it would be if the
+      // canvas were exactly <main>'s width, and widen the horizontal FOV to
+      // match. Done per frame so window resizes and the width transition are
+      // tracked without extra plumbing; it's a no-op when nothing changed.
+      viewer.scene.preRender.addEventListener(() => {
+        const container = containerRef.current
+        const host = container?.parentElement
+        const height = container?.clientHeight
+        if (!host || !height || !container.clientWidth) return
+        const hostAspect = host.clientWidth / height
+        const canvasAspect = container.clientWidth / height
+        const fovy = hostAspect <= 1
+          ? BASE_FOV
+          : 2 * Math.atan(Math.tan(BASE_FOV / 2) / hostAspect)
+        const fov = canvasAspect <= 1
+          ? fovy
+          : 2 * Math.atan(Math.tan(fovy / 2) * canvasAspect)
+        if (Math.abs(viewer.camera.frustum.fov - fov) > 1e-6) {
+          viewer.camera.frustum.fov = fov
+        }
+      })
 
       viewerRef.current = viewer
 
@@ -924,5 +958,25 @@ export default function Globe({
     }
   }, [ready, selectedCode, geoByCode])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  // Off-centring the globe by widening its container rather than offsetting
+  // the camera frustum: Cesium's pick rays ignore frustum offsets (clicks
+  // would land beside the country under the cursor), while its mouse
+  // handling measures from the canvas's bounding rect, so a moved/widened
+  // canvas picks correctly for free. The container extends by 2·|offsetX|
+  // past <main> on the side away from the shift — its centre then sits
+  // offsetX from <main>'s, and the overflow is clipped by <main> — so the
+  // globe moves without exposing an uncovered strip at either edge.
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: Math.min(0, 2 * offsetX),
+        width: `calc(100% + ${2 * Math.abs(offsetX)}px)`,
+        transition: 'left 200ms ease, width 200ms ease',
+      }}
+    />
+  )
 }

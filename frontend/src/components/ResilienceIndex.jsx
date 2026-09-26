@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, WHITE } from '../theme'
+import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // Internet Society Pulse's Internet Resilience Index. This is an
 // infrastructure measure — whether a country's network holds up — not a
@@ -56,17 +56,17 @@ export default function ResilienceIndex({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         INTERNET RESILIENCE
       </div>
 
       {state === MISSING ? (
-        <div style={{ fontFamily: MONO, fontSize: 10, color: MUTED }}>No IRI data</div>
+        <div style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>No IRI data</div>
       ) : (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
-            <span style={{ fontSize: 11, color: WHITE }}>Pulse Resilience Index</span>
-            <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>{state.year}</span>
+            <span style={{ fontSize: TYPE.body, color: WHITE }}>Pulse Resilience Index</span>
+            <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{state.year}</span>
           </div>
           <div style={{ height: 6, background: DIM, position: 'relative' }}>
             <div
@@ -81,10 +81,10 @@ export default function ResilienceIndex({ countryCode }) {
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-            <span style={{ fontFamily: MONO, fontSize: 9, color: scoreColor(state.score_overall) }}>
+            <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: scoreColor(state.score_overall) }}>
               {state.classification}
             </span>
-            <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>
+            <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>
               {Math.round(state.score_overall)}/100 resilient
             </span>
           </div>
@@ -96,8 +96,8 @@ export default function ResilienceIndex({ countryCode }) {
                 if (value == null) return null
                 return (
                   <div key={p.key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>{p.label}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: scoreColor(value) }}>
+                    <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{p.label}</span>
+                    <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: scoreColor(value) }}>
                       {Math.round(value)}/100
                     </span>
                   </div>

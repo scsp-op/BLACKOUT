@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getMethodologyDoc } from '../lib/api'
 import { splitNumber } from '../lib/toc'
-import { BORDER, BORDER_STRONG, CYAN, DIM, MONO, MUTED, RAISED, SANS, SIDEBAR, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, CYAN, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // Distance from the top of the scroll container at which a heading counts as
 // "the section you are reading". Matching the prose's `scroll-margin-top` keeps
@@ -235,7 +235,7 @@ function TocRail({ toc, activeId, onJump }) {
                     width: NUMBER_GUTTER,
                     flexShrink: 0,
                     paddingTop: isSection ? 1.5 : 1,
-                    color: active ? CYAN : DIM,
+                    color: active ? CYAN : MUTED,
                   }}
                 >
                   {number ?? ''}
@@ -271,7 +271,7 @@ function TocRail({ toc, activeId, onJump }) {
                     cursor: 'pointer',
                     fontFamily: MONO,
                     fontSize: 11,
-                    color: open ? MUTED : DIM,
+                    color: open ? WHITE : MUTED,
                   }}
                 >
                   {open ? '\u2212' : '+'}
@@ -463,7 +463,7 @@ export default function MethodologyDoc({ slug }) {
             marginBottom: 36,
           }}
         >
-          <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
+          <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.1em', color: WHITE }}>
             {doc.title.toUpperCase()}
           </span>
           <span
@@ -471,7 +471,7 @@ export default function MethodologyDoc({ slug }) {
             style={{
               marginLeft: 'auto',
               fontFamily: MONO,
-              fontSize: 9,
+              fontSize: TYPE.label,
               letterSpacing: '0.08em',
               color: MUTED,
               flexShrink: 0,

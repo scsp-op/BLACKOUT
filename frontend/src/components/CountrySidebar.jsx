@@ -17,7 +17,7 @@ import {
   GROUP_LABELS,
   hasTimeline,
 } from '../lib/blockingRegistry'
-import { BORDER, BORDER_STRONG, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const ALL_TECHNOLOGIES = Object.values(BLOCKING_REGISTRY).flat()
 
@@ -45,7 +45,7 @@ function ThemeSection({ title, first, children }) {
         borderTop: first ? 'none' : `1px solid ${BORDER_STRONG}`,
       }}
     >
-      <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.14em', color: WHITE }}>{title}</div>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.08em', color: WHITE }}>{title}</div>
       {children}
     </section>
   )
@@ -101,7 +101,7 @@ function hasEnoughTimeline(timelineRows) {
 // the data has not arrived or because the source does not cover this country.
 function SectionState({ loading, emptyLabel }) {
   return (
-    <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED }}>
+    <p style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED }}>
       {loading ? 'LOADING\u2026' : emptyLabel}
     </p>
   )
@@ -123,8 +123,8 @@ function BlockingGroupList({ groups, blockingByTech, timelineByTech, countryCode
             <p
               style={{
                 fontFamily: MONO,
-                fontSize: 9,
-                letterSpacing: '0.1em',
+                fontSize: TYPE.label,
+                letterSpacing: '0.06em',
                 textTransform: 'uppercase',
                 color: MUTED,
                 marginBottom: 2,
@@ -159,12 +159,12 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 22 }}>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: WHITE, width: 100, flexShrink: 0 }}>{tech}</span>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: WHITE, width: 96, flexShrink: 0 }}>{tech}</span>
         <BlockSegments filledCount={filledCount} color={color} />
-        <span style={{ fontFamily: MONO, fontSize: 10, color, width: 72, flexShrink: 0 }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color, width: 86, flexShrink: 0 }}>
           {BLOCKING_STATUS_LABEL[status]}
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED }}>{count}</span>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{count}</span>
       </div>
       {showTimeline && (
         <div style={{ padding: '6px 0 6px 0' }}>
@@ -257,8 +257,8 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   return (
     <div
       style={{
-        width: 380,
-        minWidth: 340,
+        width: 360,
+        minWidth: 360,
         height: '100%',
         overflowY: 'auto',
         background: SIDEBAR,
@@ -268,14 +268,14 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 500, color: WHITE }}>{country.country_name}</h2>
-            <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.05em', color: MUTED }}>
+            <h2 style={{ fontSize: TYPE.title, fontWeight: 500, color: WHITE }}>{country.country_name}</h2>
+            <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.05em', color: MUTED }}>
               {country.country_code}
             </span>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: MUTED, fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
+            style={{ background: 'transparent', border: 'none', color: MUTED, fontSize: TYPE.display, lineHeight: 1, cursor: 'pointer' }}
           >
             ×
           </button>
@@ -298,7 +298,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
         {showAiAccess && (
           <ThemeSection title="AI ACCESS">
             <div>
-              <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+              <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
               </div>
               {aiAccessGroups.length > 0 ? (
@@ -327,7 +327,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
         <ThemeSection title="CIRCUMVENTION">
           {showCircumvention && (
             <div>
-              <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+              <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
               </div>
               {circumventionGroups.length > 0 ? (

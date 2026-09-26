@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCategories } from '../lib/api'
-import { AMBER, BORDER, CRIMSON, DIM, LOCAL, MONO, MUTED, WHITE } from '../theme'
+import { AMBER, BORDER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 const STATUS_COLOR = {
   HEAVILY_CENSORED: CRIMSON,
@@ -52,7 +52,7 @@ export default function CategoryBreakdown({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         CONTENT CATEGORIES CENSORED
       </div>
 
@@ -63,7 +63,7 @@ export default function CategoryBreakdown({ countryCode }) {
           return (
             <div key={r.category_code} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
-                style={{ fontSize: 10, color: WHITE, width: 118, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                style={{ fontSize: TYPE.body, color: WHITE, width: 140, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 title={`${r.category_label} — ${r.measurement_count.toLocaleString()} measurements`}
               >
                 {r.category_label}
@@ -71,7 +71,7 @@ export default function CategoryBreakdown({ countryCode }) {
               <div style={{ flex: 1, height: 8, background: BORDER, position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${width}%`, background: color }} />
               </div>
-              <span style={{ fontFamily: MONO, fontSize: 9, color, width: 34, flexShrink: 0, textAlign: 'right' }}>
+              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color, width: 34, flexShrink: 0, textAlign: 'right' }}>
                 {Math.round(r.anomaly_rate * 100)}%
               </span>
             </div>
@@ -79,7 +79,7 @@ export default function CategoryBreakdown({ countryCode }) {
         })}
       </div>
 
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', marginTop: 6 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 6 }}>
         % of OONI web-connectivity tests anomalous, by content category
       </div>
     </section>

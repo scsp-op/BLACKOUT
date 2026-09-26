@@ -1,4 +1,4 @@
-import { BORDER, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { SPACE_TRACKING_OPTIONS } from './SatelliteLegend'
 
 // Shared with the legend's row labels for the 5 headline categories; `geo`/
@@ -14,7 +14,7 @@ const CATEGORY_LABEL = {
 // straight from the live-polled position list — its lat/lon/alt refresh with
 // every poll for free, without a fetch of its own. `periodMinutes` comes from
 // the separate orbit-path fetch (App.jsx), since only that endpoint computes it.
-export default function SatelliteCard({ satellite, periodMinutes, onClose }) {
+export default function SatelliteCard({ satellite, periodMinutes, onClose, left = 12 }) {
   if (!satellite) return null
 
   return (
@@ -22,10 +22,9 @@ export default function SatelliteCard({ satellite, periodMinutes, onClose }) {
       style={{
         position: 'absolute',
         top: 12,
-        // Beside SatelliteLegend (left:292, width:196), not on top of it — this
-        // used to sit at top:84/left:292, directly overlapping the middle of
-        // the legend's row list instead of the empty globe.
-        left: 500,
+        // Top-left of the globe; App shifts it right of the floating left dock
+        // column while that column is open.
+        left,
         background: SIDEBAR,
         border: `1px solid ${BORDER}`,
         padding: '10px 12px',
@@ -34,19 +33,19 @@ export default function SatelliteCard({ satellite, periodMinutes, onClose }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: WHITE }}>{satellite.name}</div>
+        <div style={{ fontSize: TYPE.title, fontWeight: 500, color: WHITE }}>{satellite.name}</div>
         <button
           type="button"
           onClick={onClose}
-          style={{ background: 'transparent', border: 'none', color: MUTED, fontSize: 16, lineHeight: 1, cursor: 'pointer' }}
+          style={{ background: 'transparent', border: 'none', color: MUTED, fontSize: TYPE.display, lineHeight: 1, cursor: 'pointer' }}
         >
           ×
         </button>
       </div>
-      <div style={{ fontFamily: MONO, fontSize: 9, color: MUTED, marginTop: 2, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED, marginTop: 2, marginBottom: 8 }}>
         NORAD {satellite.norad_id} · {CATEGORY_LABEL[satellite.category] ?? satellite.category}
       </div>
-      <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px', margin: 0, fontFamily: MONO, fontSize: 10 }}>
+      <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px', margin: 0, fontFamily: MONO, fontSize: TYPE.label }}>
         <dt style={{ color: MUTED }}>ALT</dt>
         <dd style={{ margin: 0, color: WHITE }}>{satellite.alt_km.toFixed(1)} km</dd>
         <dt style={{ color: MUTED }}>LAT</dt>
@@ -69,7 +68,7 @@ export default function SatelliteCard({ satellite, periodMinutes, onClose }) {
           marginTop: 10,
           textAlign: 'center',
           fontFamily: MONO,
-          fontSize: 9,
+          fontSize: TYPE.label,
           letterSpacing: '0.08em',
           color: MUTED,
           border: `1px solid ${BORDER}`,

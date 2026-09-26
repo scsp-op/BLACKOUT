@@ -38,6 +38,21 @@ export const DIM         = '#3d4f6b'
 export const MONO        = '"IBM Plex Mono", "Fira Mono", monospace'
 export const SANS        = '"Inter", system-ui, sans-serif'
 
+// Type scale, in px, calibrated against the ranking list: Inter at 11 for
+// names and running text, Plex Mono at 10 for figures and labels — one step
+// above the original UI, whose 8–9px text read too small. Mono glyphs are
+// much wider than Inter's, so mono reads visibly bigger than Inter at the same
+// size — mono text therefore tops out at `label` (numeric readouts in the
+// header aside), and `body` is for Inter. Pick a step by role; never
+// hand-pick an off-scale size.
+export const TYPE = {
+  tick:     9, // chart axis ticks, footnotes, source tags
+  label:   10, // mono: uppercase labels, codes, figures, controls
+  body:    11, // Inter: names, list entries, running text
+  title:   13, // country / satellite name, wordmark
+  display: 15, // close glyph
+}
+
 // Tier colors are pinned to the stack-dependency palette rather than an
 // arbitrary ramp — blue reads as "safe/trusted" which is wrong for a tier
 // defined by foreign compute dependency.
