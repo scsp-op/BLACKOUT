@@ -5,12 +5,12 @@ import {
   ResponsiveContainer,
   Scatter,
   ScatterChart,
-  Tooltip,
   XAxis,
   YAxis,
   ZAxis,
 } from 'recharts'
-import { BORDER, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, MONO, MUTED, TYPE } from '../theme'
+import { ChartTitle, Readout } from './chartHover'
 import { SEVERITY_COLOR, severityLabel } from './OutageFeed'
 
 // Severity bands, bottom to top, as y positions 0/1/2.
@@ -29,19 +29,6 @@ function formatDuration(secs) {
   return `${Math.round(secs / 60)}m`
 }
 
-function OutageTooltip({ active, payload }) {
-  if (!active || !payload || !payload.length) return null
-  const p = payload[0].payload
-  return (
-    <div style={{ background: SIDEBAR, border: `1px solid ${BORDER}`, padding: '6px 8px', fontFamily: MONO, fontSize: TYPE.label }}>
-      <div style={{ color: WHITE }}>{new Date(p.t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-      <div style={{ color: SEVERITY_COLOR[p.severity] }}>{p.severity.toLowerCase()} · {formatDuration(p.durationSecs)}</div>
-      <div style={{ color: MUTED }}>IODA score {Math.round(p.score)}</div>
-      <div style={{ color: MUTED }}>source: {p.datasource}</div>
-    </div>
-  )
-}
-
 // Discrete internet-outage events over the trailing 90-day window. Each point
 // is one IODA-detected disruption, placed in its severity band (minor / major
 // / severe — the same thresholds and colours as the Outages panel) and sized
@@ -52,6 +39,9 @@ function OutageTooltip({ active, payload }) {
 export default function OutageTimeline({ countryCode }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
+  // The hovered point itself (not a row index — a scatter hovers per point),
+  // read out on the title line like the other charts (see chartHover.jsx).
+  const [hovered, setHovered] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -98,9 +88,18 @@ export default function OutageTimeline({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
+      <ChartTitle
+        readout={
+          hovered && (
+            <Readout
+              value={hovered.severity.toLowerCase()}
+              detail={`${formatDuration(hovered.durationSecs)} · ${formatDay(hovered.t)}`}
+            />
+          )
+        }
+      >
         INTERNET OUTAGES (90D)
-      </div>
+      </ChartTitle>
       <div style={{ width: '100%', height: HEIGHT }}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -130,8 +129,12 @@ export default function OutageTimeline({ countryCode }) {
               width={44}
             />
             <ZAxis type="number" dataKey="durationSecs" range={[24, 180]} />
-            <Tooltip content={<OutageTooltip />} cursor={{ stroke: BORDER }} />
-            <Scatter data={points} fillOpacity={0.8}>
+            <Scatter
+              data={points}
+              fillOpacity={0.8}
+              onMouseEnter={(point) => setHovered(point?.payload ?? null)}
+              onMouseLeave={() => setHovered(null)}
+            >
               {points.map((p, i) => (
                 <Cell key={i} fill={SEVERITY_COLOR[p.severity]} />
               ))}

@@ -9,7 +9,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CRIMSON, CYAN, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, CRIMSON, CYAN, MONO, MUTED, TYPE } from '../theme'
+import { CURSOR_ONLY, ChartTitle, Readout, useChartHover } from './chartHover'
 
 const MAX_TICKS = 6
 
@@ -57,6 +58,7 @@ function asnVisibilityPct(row) {
 export default function BgpVisibilityChart({ countryCode }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
+  const [hover, hoverHandlers] = useChartHover()
 
   useEffect(() => {
     let cancelled = false
@@ -88,16 +90,17 @@ export default function BgpVisibilityChart({ countryCode }) {
   if (chartData.length === 0) return null
 
   const ticks = monthlyTicks(rows)
+  const hovered = hover != null ? chartData[hover] : null
   const latestWithPrefixes = [...rows].reverse().find((r) => r.routed_v4_prefixes != null)
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
+      <ChartTitle readout={hovered && <Readout value={`${hovered.visiblePct.toFixed(1)}%`} detail={hovered.date} />}>
         BGP PREFIX VISIBILITY
-      </div>
+      </ChartTitle>
       <div style={{ width: '100%', height: 140 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }} {...hoverHandlers}>
             <CartesianGrid stroke={BORDER} vertical={false} />
             <XAxis
               dataKey="date"
@@ -116,12 +119,7 @@ export default function BgpVisibilityChart({ countryCode }) {
               unit="%"
             />
             <ReferenceLine y={100} stroke={MUTED} strokeDasharray="3 3" />
-            <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
-              labelStyle={{ color: WHITE }}
-              itemStyle={{ color: MUTED }}
-              formatter={(value) => `${value.toFixed(1)}%`}
-            />
+            <Tooltip {...CURSOR_ONLY} />
             <Line
               type="monotone"
               dataKey="visiblePct"

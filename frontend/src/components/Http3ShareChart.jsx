@@ -8,7 +8,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CYAN, DIM, MONO, MUTED, SIDEBAR, TYPE, US_EXPOSURE, WHITE } from '../theme'
+import { BORDER, CYAN, DIM, MONO, MUTED, TYPE, US_EXPOSURE } from '../theme'
+import { CURSOR_ONLY, ChartTitle, Readout, useChartHover } from './chartHover'
 
 // Same thinning approach as TorChart.jsx: one tick per month, capped so
 // labels don't collide in a 360px sidebar.
@@ -45,6 +46,7 @@ function monthlyTicks(rows) {
 export default function Http3ShareChart({ countryCode }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
+  const [hover, hoverHandlers] = useChartHover()
 
   useEffect(() => {
     let cancelled = false
@@ -78,15 +80,16 @@ export default function Http3ShareChart({ countryCode }) {
   }))
   const ticks = monthlyTicks(rows)
   const latest = rows[rows.length - 1]
+  const hovered = hover != null ? chartData[hover] : null
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
+      <ChartTitle readout={hovered && <Readout value={`${hovered.http3.toFixed(2)}%`} detail={hovered.date} />}>
         HTTP/3 (QUIC) TRAFFIC SHARE
-      </div>
+      </ChartTitle>
       <div style={{ width: '100%', height: 140 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }} {...hoverHandlers}>
             <CartesianGrid stroke={BORDER} vertical={false} />
             <XAxis
               dataKey="date"
@@ -109,12 +112,7 @@ export default function Http3ShareChart({ countryCode }) {
               width={38}
               unit="%"
             />
-            <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
-              labelStyle={{ color: WHITE }}
-              itemStyle={{ color: MUTED }}
-              formatter={(value) => `${value.toFixed(2)}%`}
-            />
+            <Tooltip {...CURSOR_ONLY} />
             {/* Stacked bottom-to-top: HTTP/3 (the signal of interest, in the
                 app's HUD/live-signal accent) at the base, then HTTP/2, then
                 HTTP/1.x on top. HTTP/3 must be the bottom band: stacked on top

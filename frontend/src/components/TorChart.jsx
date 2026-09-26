@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { BORDER, CRIMSON, MONO, MUTED, TYPE, US_EXPOSURE, WHITE } from '../theme'
+import { CURSOR_ONLY, Readout, useChartHover } from './chartHover'
 
 // Most labels this axis will ever draw.
 //
@@ -104,11 +105,10 @@ function latestWithTransports(rows) {
 // without inviting that comparison. Both series stay neutral slate; crimson
 // is reserved for the high-blocking episodes shaded behind them.
 //
-// No floating tooltip: at 78–96px tall a tooltip box covered the whole plot,
-// and with the charts synced both lit up at once. The hovered value is read
-// out in each chart's label row instead (`hover` is the shared row index), and
-// the synced cursor line marks the date on both.
-function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis, height, hover, onHover }) {
+// Hover values are read out in each chart's label row rather than a tooltip
+// box (see chartHover.jsx); both series share one hover, so the synced cursor
+// line and both readouts move together.
+function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis, height, hover, hoverHandlers }) {
   const row = hover != null ? data[hover] : null
   return (
     <>
@@ -116,7 +116,7 @@ function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis,
         <span>{label}</span>
         {row && (
           <span className="tabular" style={{ marginLeft: 'auto' }}>
-            <span style={{ color: WHITE }}>{row[dataKey].toLocaleString()}</span> · {row.date}
+            <Readout value={row[dataKey].toLocaleString()} detail={row.date} />
           </span>
         )}
       </div>
@@ -126,8 +126,7 @@ function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis,
             data={data}
             syncId="tor"
             margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-            onMouseMove={(state) => onHover(state?.isTooltipActive ? state.activeTooltipIndex : null)}
-            onMouseLeave={() => onHover(null)}
+            {...hoverHandlers}
           >
             <CartesianGrid stroke={BORDER} vertical={false} />
             <XAxis
@@ -146,8 +145,7 @@ function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis,
               width={44}
               tickCount={3}
             />
-            {/* Kept only for the (synced) cursor line; renders no box. */}
-            <Tooltip content={() => null} cursor={{ stroke: MUTED, strokeDasharray: '2 2' }} />
+            <Tooltip {...CURSOR_ONLY} />
             {highBlockingGroups.map((group) => (
               <ReferenceArea
                 key={`area-${group.start}`}
@@ -181,7 +179,7 @@ function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis,
 export default function TorChart({ countryCode }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
-  const [hover, setHover] = useState(null)
+  const [hover, hoverHandlers] = useChartHover()
 
   useEffect(() => {
     let cancelled = false
@@ -231,7 +229,7 @@ export default function TorChart({ countryCode }) {
         highBlockingGroups={highBlockingGroups}
         height={78}
         hover={hover}
-        onHover={setHover}
+        hoverHandlers={hoverHandlers}
       />
       <TorSeries
         data={chartData}
@@ -242,7 +240,7 @@ export default function TorChart({ countryCode }) {
         showXAxis
         height={96}
         hover={hover}
-        onHover={setHover}
+        hoverHandlers={hoverHandlers}
       />
 
       {highBlockingGroups.length > 0 && (
