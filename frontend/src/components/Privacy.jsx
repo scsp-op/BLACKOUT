@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { PROSE_CSS } from './MethodologyDoc'
-import { ISSUES_URL, REPO_URL } from '../lib/links'
 import { globePath, linkProps } from '../lib/router'
 import { BASE, BORDER, CYAN, HIGHLIGHT, MONO, MUTED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
+const REPO_URL = 'https://github.com/moumenalaoui/globe'
 const LAST_UPDATED = '26 September 2026'
 
 // Same overlay layer as the methodology documents (see Methodology.jsx): the
@@ -149,7 +149,7 @@ export default function Privacy() {
             <h3>Questions</h3>
             <p>
               Questions about this page or the tool can be raised by{' '}
-              <a href={ISSUES_URL} target="_blank" rel="noreferrer noopener">opening an issue on GitHub</a>.
+              <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer noopener">opening an issue on GitHub</a>.
             </p>
           </div>
         </article>

@@ -1,6 +1,5 @@
 import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { SOURCES } from '../lib/sources'
-import { REPO_URL } from '../lib/links'
 import { linkProps } from '../lib/router'
 
 // Honest link state: mirrors whether the primary country fetch is in flight,
@@ -21,6 +20,8 @@ function formatAge(dataAge) {
   if (days <= 0) return 'today'
   return days === 1 ? '1 day old' : `${days} days old`
 }
+
+const REPO_URL = 'https://github.com/moumenalaoui/globe'
 
 // The GitHub mark, inlined rather than fetched. A remote icon would be the only
 // external request the app makes, and it would fail behind exactly the kind of
