@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   ComposedChart,
   Area,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -19,7 +18,7 @@ import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE, US_EXPOSURE, WHITE } from 
 // series spans ~2.5 years, so it still produced 31 labels. Recharts renders
 // every tick handed to it explicitly — it does not thin them — and 31 ×
 // "2026-07" cannot fit the 360px sidebar, so they collided and clipped. Five is
-// what reads cleanly between this chart's two y-axes at that width.
+// what reads cleanly at that width.
 const MAX_TICKS = 5
 
 // One tick per month, then thinned to at most MAX_TICKS by taking every Nth.
@@ -97,6 +96,75 @@ function latestWithTransports(rows) {
   return null
 }
 
+// One of the two stacked series. Relay and bridge users used to share a chart
+// on two independent y-axes (0–160k left, 0–60k right), where every crossing
+// and gap between the lines was an artefact of the two scales — easy to read
+// as meaning something. Stacked mini-charts, each on its own honest axis and
+// sharing the time axis (`syncId` links their tooltips), show the same data
+// without inviting that comparison. Both series stay neutral slate; crimson
+// is reserved for the high-blocking episodes shaded behind them.
+function TorSeries({ data, dataKey, label, ticks, highBlockingGroups, showXAxis, height }) {
+  return (
+    <>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', margin: '2px 0 2px' }}>
+        {label}
+      </div>
+      <div style={{ width: '100%', height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} syncId="tor" margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+            <CartesianGrid stroke={BORDER} vertical={false} />
+            <XAxis
+              dataKey="date"
+              ticks={ticks}
+              tickFormatter={(d) => d.slice(0, 7)}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
+              axisLine={{ stroke: BORDER }}
+              tickLine={false}
+              hide={!showXAxis}
+            />
+            <YAxis
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
+              axisLine={{ stroke: BORDER }}
+              tickLine={false}
+              width={44}
+              tickCount={3}
+            />
+            <Tooltip
+              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
+              labelStyle={{ color: WHITE }}
+              itemStyle={{ color: MUTED }}
+              formatter={(value) => value.toLocaleString()}
+            />
+            {highBlockingGroups.map((group) => (
+              <ReferenceArea
+                key={`area-${group.start}`}
+                x1={group.start}
+                x2={group.end}
+                fill={CRIMSON}
+                fillOpacity={0.15}
+              />
+            ))}
+            {highBlockingGroups.map((group) => (
+              // No label: the line plus the shaded ReferenceArea mark where the
+              // blocking episode falls, and the tooltip gives the exact date.
+              <ReferenceLine key={`line-${group.start}`} x={group.start} stroke={CRIMSON} strokeOpacity={0.7} />
+            ))}
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              name={label}
+              fill={US_EXPOSURE}
+              fillOpacity={0.2}
+              stroke={US_EXPOSURE}
+              strokeWidth={1}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </>
+  )
+}
+
 export default function TorChart({ countryCode }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
@@ -141,97 +209,32 @@ export default function TorChart({ countryCode }) {
       <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         TOR RELAY / BRIDGE USERS
       </div>
-      <div style={{ width: '100%', height: 180 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {/* top was 18 to clear the reference-line date labels; with those gone
-              the plot gets the space back instead of leaving a gap. */}
-          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid stroke={BORDER} vertical={false} />
-            <XAxis
-              dataKey="date"
-              ticks={ticks}
-              tickFormatter={(d) => d.slice(0, 7)}
-              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
-              axisLine={{ stroke: BORDER }}
-              tickLine={false}
-            />
-            <YAxis
-              yAxisId="relay"
-              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
-              axisLine={{ stroke: BORDER }}
-              tickLine={false}
-              width={44}
-            />
-            <YAxis
-              yAxisId="bridge"
-              orientation="right"
-              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
-              axisLine={{ stroke: BORDER }}
-              tickLine={false}
-              width={44}
-            />
-            <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: TYPE.label, fontFamily: MONO }}
-              labelStyle={{ color: WHITE }}
-              itemStyle={{ color: MUTED }}
-            />
-            {highBlockingGroups.map((group) => (
-              <ReferenceArea
-                key={`area-${group.start}`}
-                yAxisId="relay"
-                x1={group.start}
-                x2={group.end}
-                fill={CRIMSON}
-                fillOpacity={0.15}
-              />
-            ))}
-            <Area
-              yAxisId="relay"
-              type="monotone"
-              dataKey="relay_users"
-              name="Relay users"
-              fill={US_EXPOSURE}
-              fillOpacity={0.2}
-              stroke={US_EXPOSURE}
-              strokeWidth={1}
-            />
-            <Line
-              yAxisId="bridge"
-              type="monotone"
-              dataKey="bridge_users"
-              name="Bridge users"
-              stroke={CRIMSON}
-              strokeWidth={1.5}
-              dot={false}
-            />
-            {highBlockingGroups.map((group) => (
-              // No label: the dates that used to sit above the plot competed
-              // with the x-axis for the same information and crowded the top of
-              // a 180px chart. The line plus the shaded ReferenceArea already
-              // mark where the blocking episode falls, and the tooltip gives the
-              // exact date on hover.
-              <ReferenceLine
-                key={`line-${group.start}`}
-                yAxisId="relay"
-                x={group.start}
-                stroke={CRIMSON}
-                strokeOpacity={0.7}
-              />
-            ))}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+      <TorSeries
+        data={chartData}
+        dataKey="relay_users"
+        label="Relay users (direct)"
+        ticks={ticks}
+        highBlockingGroups={highBlockingGroups}
+        height={78}
+      />
+      <TorSeries
+        data={chartData}
+        dataKey="bridge_users"
+        label="Bridge users (circumvention)"
+        ticks={ticks}
+        highBlockingGroups={highBlockingGroups}
+        showXAxis
+        height={96}
+      />
 
-      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: TYPE.label }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: US_EXPOSURE, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>Relay users (direct)</span>
+      {highBlockingGroups.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontFamily: MONO, fontSize: TYPE.tick, color: MUTED }}>
+          <div style={{ width: 8, height: 8, background: CRIMSON, opacity: 0.6, flexShrink: 0 }} />
+          {/* HIGH_BLOCKING = users below the lower bound of Tor Metrics'
+              published anomaly-detection range (fetchers/tor_metrics.rs). */}
+          Users below Tor's expected range (possible blocking)
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: CRIMSON, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>Bridge users (circumvention)</span>
-        </div>
-      </div>
+      )}
 
       {transportRow && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 6, fontFamily: MONO, fontSize: TYPE.label }}>
