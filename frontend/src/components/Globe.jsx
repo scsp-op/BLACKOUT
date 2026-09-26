@@ -36,19 +36,19 @@ if (ION_TOKEN) {
   Cesium.Ion.defaultAccessToken = ION_TOKEN
 }
 
-// The acute layer's only motion: a ripple expanding out of each outage marker.
-// Billboard scale/alpha only — never geometry — so nothing re-tessellates per
-// frame. Slow enough that 30-odd markers read as a live signal, not a flicker.
-const OUTAGE_PULSE_PERIOD_MS = 2400
+// The acute layer's only motion: outage blooms breathe in brightness. Alpha
+// only — never geometry — so nothing re-tessellates per frame. Smooth 0→1→0.
+const OUTAGE_PULSE_PERIOD_MS = 1600
 
-// Outage markers are sized in screen pixels, not metres: a surface glow sized
-// in metres shrank to a speck at whole-globe zoom (where "N outages" should be
-// most visible) and smeared across the map when zoomed in. Larger = more
-// severe, on the same thresholds as the Outages panel.
-function outagePixelSize(score) {
-  if (score >= 200) return 22
-  if (score >= 60) return 18
-  return 14
+function pulse01(periodMs) {
+  const now = performance.now()
+  return 0.5 - 0.5 * Math.cos(((now % periodMs) / periodMs) * Math.PI * 2)
+}
+
+function outageRadius(score) {
+  if (score >= 200) return 340_000
+  if (score >= 60) return 240_000
+  return 160_000
 }
 
 // Empty-space colour behind/around the globe (skybox is off — see init —
@@ -132,50 +132,30 @@ function choroplethColor(censorship) {
 // many countries are drawn.
 const canvasCache = new Map()
 
-// Outage marker: near-white core, crimson ring, thin dark keyline. The core
-// and keyline are what keep it legible on any fill — over crimson choropleth
-// land a crimson-only mark disappears, which is exactly where outages matter.
-function outageMarkerCanvas(hex) {
-  const key = `outage-marker:${hex}`
+// Soft radial glow (bright core → transparent edge) — the "thermal bloom" that
+// replaces the old dot+ring marker. Painted onto a surface ellipse so it reads
+// as signal radiating off the map rather than a symbol standing on top of it.
+function bloomCanvas(hex) {
+  const key = `bloom:${hex}`
   if (!canvasCache.has(key)) {
-    const size = 64
+    const size = 128
     const canvas = document.createElement('canvas')
     canvas.width = size
     canvas.height = size
     const ctx = canvas.getContext('2d')
-    const c = size / 2
+    const r = size / 2
+    const gradient = ctx.createRadialGradient(r, r, 0, r, r, r)
+    // Hot near-white core → saturated mid → transparent edge. The bright core
+    // keeps the mark legible even over crimson choropleth land, where a plain
+    // crimson glow blended into the globe.
+    gradient.addColorStop(0, 'rgba(255, 241, 224, 0.95)')
+    gradient.addColorStop(0.14, rgbaFrom(hex, 0.92))
+    gradient.addColorStop(0.4, rgbaFrom(hex, 0.4))
+    gradient.addColorStop(1, rgbaFrom(hex, 0))
+    ctx.fillStyle = gradient
     ctx.beginPath()
-    ctx.arc(c, c, 21, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(3, 6, 10, 0.75)'
+    ctx.arc(r, r, r, 0, Math.PI * 2)
     ctx.fill()
-    ctx.beginPath()
-    ctx.arc(c, c, 16, 0, Math.PI * 2)
-    ctx.lineWidth = 7
-    ctx.strokeStyle = rgbaFrom(hex, 1)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(c, c, 8, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255, 241, 224, 1)'
-    ctx.fill()
-    canvasCache.set(key, canvas)
-  }
-  return canvasCache.get(key)
-}
-
-// The ripple drawn behind each marker, scaled up and faded out per frame.
-function outageRippleCanvas(hex) {
-  const key = `outage-ripple:${hex}`
-  if (!canvasCache.has(key)) {
-    const size = 64
-    const canvas = document.createElement('canvas')
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext('2d')
-    ctx.beginPath()
-    ctx.arc(size / 2, size / 2, 28, 0, Math.PI * 2)
-    ctx.lineWidth = 4
-    ctx.strokeStyle = rgbaFrom(hex, 1)
-    ctx.stroke()
     canvasCache.set(key, canvas)
   }
   return canvasCache.get(key)
@@ -222,7 +202,7 @@ function satelliteColor(category) {
 // `geoByCode` supplies centroids and bounding boxes for every country the
 // basemap can draw (from /api/geo). Blocking status is deliberately not a prop:
 // the globe shows censorship intensity through the choropleth and live events
-// through the outage markers, and the per-country blocking detail belongs to the
+// through the outage blooms, and the per-country blocking detail belongs to the
 // sidebar. The researched policy dossiers are likewise not a prop.
 export default function Globe({
   geoByCode = {},
@@ -246,8 +226,9 @@ export default function Globe({
 }) {
   const containerRef = useRef(null)
   const viewerRef = useRef(null)
-  // Per-country outage marker state: a marker + ripple entity pair for each
-  // country with an active outage (see the outage effect below).
+  // Per-country marker state: a crimson bloom entity for each confirmed-blocked
+  // country (the only visible status marks). Picking is handled by the land
+  // fill, not markers, so there are no invisible pick billboards anymore.
   const outageStateRef = useRef({})
   // Choropleth: the loaded basemap geojson is stashed here in init so the
   // fill effect (which reacts to index data arriving later) can reuse it, and
@@ -431,7 +412,7 @@ export default function Globe({
 
       // Satellite markers: a single PointPrimitiveCollection (GPU-batched, one
       // draw call regardless of count) rather than one Entity per satellite —
-      // the per-Entity outage-marker pattern is fine for a few dozen
+      // the existing per-Entity bloom pattern above is fine for a few hundred
       // countries, not for thousands of moving points. Populated/updated by
       // its own effect below, reacting to the `satellites` prop.
       satPointsRef.current = new Cesium.PointPrimitiveCollection()
@@ -456,23 +437,23 @@ export default function Globe({
       cableLandingRef.current.show = false
       viewer.scene.primitives.add(cableLandingRef.current)
 
-      // Outage markers are built by their own effect, from props — see
+      // Markers and blooms are built by their own effects, from props — see
       // below. Init owns only what the scene needs once: the viewer, the borders
       // and the input handlers. There is deliberately no per-frame animation
-      // loop — the only moving part (the outage ripples) animates itself through
+      // loop — the only moving part (outage bloom alpha) animates itself through
       // CallbackProperty, so there's nothing to tear down.
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
 
       // Resolve a country code from a pick: the land-fill polygons carry the code
-      // directly as their GeometryInstance id (a string), and the outage
-      // markers carry it in entity properties. Clicking the ocean resolves to nothing.
+      // directly as their GeometryInstance id (a string), and the crimson blooms
+      // carry it in entity properties. Clicking the ocean resolves to nothing.
       // This is what lets any country — not just signalled ones — be selected
       // from the globe, matching the header dropdown.
       const codeFromPick = (picked) => {
         const id = picked?.id
         // Land rings are `<code>#<ring>` so each ring carries a unique id and
         // can be recoloured on its own; everything else that resolves to a
-        // country (the outage markers) uses the bare code.
+        // country (the blooms, the selection marker) uses the bare code.
         if (typeof id === 'string') {
           const hash = id.indexOf('#')
           return hash === -1 ? id : id.slice(0, hash)
@@ -627,63 +608,36 @@ export default function Globe({
 
     const outageState = outageStateRef.current
     for (const [code, o] of Object.entries(outageState)) {
-      viewer.entities.remove(o.marker)
-      viewer.entities.remove(o.ripple)
+      viewer.entities.remove(o.bloomEntity)
       delete outageState[code]
-    }
-
-    // Lifted clear of the land fill (250m), choropleth (600m) and borders
-    // (2000m) so the marker never z-fights them.
-    const MARKER_HEIGHT = 20_000
-    // Billboards aren't occluded by the globe (depthTestAgainstTerrain is
-    // off), so a marker on the far side would float in space past the limb.
-    // Hide each one while its ground point is over the horizon instead — one
-    // cheap ellipsoid test per marker per frame.
-    const occluder = new Cesium.EllipsoidalOccluder(Cesium.Ellipsoid.WGS84, viewer.camera.positionWC)
-    const onNearSide = (ground) => {
-      occluder.cameraPosition = viewer.camera.positionWC
-      return occluder.isPointVisible(ground)
     }
 
     outages.forEach((o) => {
       if (o.lat == null || o.lon == null) return
-      const position = Cesium.Cartesian3.fromDegrees(o.lon, o.lat, MARKER_HEIGHT)
-      const ground = Cesium.Cartesian3.fromDegrees(o.lon, o.lat)
-      const show = new Cesium.CallbackProperty(() => onNearSide(ground), false)
-      const px = outagePixelSize(o.maxScore)
-      // Each marker's ripple starts at a different phase so 30-odd markers
-      // don't pulse in lockstep.
-      const phase = Math.random() * OUTAGE_PULSE_PERIOD_MS
-      const t = () => {
-        const now = performance.now() + phase
-        return (now % OUTAGE_PULSE_PERIOD_MS) / OUTAGE_PULSE_PERIOD_MS
-      }
-      const ripple = viewer.entities.add({
-        position,
+      // A crimson surface bloom whose brightness breathes — the only motion on
+      // the map, marking a LIVE disruption. Only the material alpha animates
+      // (via CallbackProperty), never the ellipse size, so the geometry is
+      // never re-tessellated. Surface-hugging + depth-tested, so the far side
+      // is occluded by the globe like everything else.
+      const radius = outageRadius(o.maxScore)
+      const bloomEntity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(o.lon, o.lat),
         properties: { code: o.code },
-        billboard: {
-          show,
-          image: outageRippleCanvas(CRIMSON),
-          width: px,
-          height: px,
-          scale: new Cesium.CallbackProperty(() => 1 + 1.4 * t(), false),
-          color: new Cesium.CallbackProperty(
-            () => Cesium.Color.WHITE.withAlpha(0.7 * (1 - t())),
-            false,
-          ),
+        ellipse: {
+          semiMajorAxis: radius,
+          semiMinorAxis: radius,
+          height: 3000,
+          material: new Cesium.ImageMaterialProperty({
+            image: bloomCanvas(CRIMSON),
+            transparent: true,
+            color: new Cesium.CallbackProperty(
+              () => Cesium.Color.WHITE.withAlpha(0.3 + 0.55 * pulse01(OUTAGE_PULSE_PERIOD_MS)),
+              false,
+            ),
+          }),
         },
       })
-      const marker = viewer.entities.add({
-        position,
-        properties: { code: o.code },
-        billboard: {
-          show,
-          image: outageMarkerCanvas(CRIMSON),
-          width: px,
-          height: px,
-        },
-      })
-      outageState[o.code] = { marker, ripple }
+      outageState[o.code] = { bloomEntity }
     })
   }, [ready, outages])
 
@@ -856,7 +810,7 @@ export default function Globe({
       // producing a pick ID; its geometry still renders in the pick pass and
       // still writes depth, so it hid the land behind it. The effect was that
       // every country with an index score was unclickable on its landmass and
-      // only the outage markers above the choropleth could be hit. The fix is for the
+      // only the blooms above the choropleth could be hit. The fix is for the
       // topmost layer to carry the code, not to try to be invisible to picks.
     })
     viewer.scene.primitives.add(primitive)
