@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import * as topojson from 'topojson-client'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { CRIMSON } from '../theme'
+import { CRIMSON, HIGHLIGHT } from '../theme'
 import { CATEGORY_COLOR_HEX } from './SatelliteLegend'
 
 const NUMERIC_CODE_ALIASES = new Map([[732, 'MA']])
@@ -1009,6 +1009,56 @@ export default function Globe({
         destination: Cesium.Cartesian3.fromDegrees(HOME_VIEW.lon, HOME_VIEW.lat, HOME_VIEW.height),
         duration: 1.5,
       })
+    }
+  }, [ready, selectedCode, geoByCode])
+
+  // Selected-country outline. Framing alone didn't mark the selection: once
+  // the camera settled, the chosen country was indistinguishable from its
+  // similarly shaded neighbours. A gold (HIGHLIGHT — the app's selection
+  // colour) line traces every ring of the selected country, over a wider dark
+  // under-stroke so it reads on any choropleth fill. Just above the borders
+  // (2000m) so it draws on top of them. Rebuilt per selection: one country's
+  // rings, cheap.
+  useEffect(() => {
+    if (!ready || !selectedCode) return
+    const viewer = viewerRef.current
+    if (!viewer || viewer.isDestroyed()) return
+    const geojson = geojsonRef.current
+    if (!geojson) return
+
+    // Same feature → country resolution as the land fill above.
+    const numericToCode = new Map()
+    for (const [code, geo] of Object.entries(geoByCode)) {
+      if (geo && geo.iso_numeric != null) numericToCode.set(parseInt(geo.iso_numeric, 10), code)
+    }
+
+    const collection = new Cesium.PolylineCollection()
+    const underlayColor = Cesium.Color.fromCssColorString('#03060a').withAlpha(0.7)
+    const lineColor = Cesium.Color.fromCssColorString(HIGHLIGHT)
+    // A Material per polyline, never shared: destroying the collection
+    // destroys each polyline's material, so a shared one throws on the second.
+    const addRing = (ring) => {
+      if (!ring || ring.length < 3) return
+      const positions = ring.map(([lng, lat]) => Cesium.Cartesian3.fromDegrees(lng, lat, 2500))
+      collection.add({ positions, width: 4, material: Cesium.Material.fromType('Color', { color: underlayColor }) })
+      collection.add({ positions, width: 2, material: Cesium.Material.fromType('Color', { color: lineColor }) })
+    }
+
+    for (const feature of geojson.features) {
+      const numeric = parseInt(feature.id, 10)
+      const code =
+        numericToCode.get(numeric) ??
+        NUMERIC_CODE_ALIASES.get(numeric) ??
+        NAME_CODE_ALIASES.get(feature.properties?.name)
+      if (code !== selectedCode) continue
+      const g = feature.geometry
+      if (g.type === 'Polygon') addRing(g.coordinates[0])
+      else if (g.type === 'MultiPolygon') g.coordinates.forEach((poly) => addRing(poly[0]))
+    }
+
+    viewer.scene.primitives.add(collection)
+    return () => {
+      if (!viewer.isDestroyed()) viewer.scene.primitives.remove(collection)
     }
   }, [ready, selectedCode, geoByCode])
 
