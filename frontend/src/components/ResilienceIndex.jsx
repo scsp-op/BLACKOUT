@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE, textTone } from '../theme'
+import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // Internet Society Pulse's Internet Resilience Index. This is an
 // infrastructure measure — whether a country's network holds up — not a
@@ -81,7 +81,7 @@ export default function ResilienceIndex({ countryCode }) {
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-            <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(scoreColor(state.score_overall)) }}>
+            <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: scoreColor(state.score_overall) }}>
               {state.classification}
             </span>
             <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>
@@ -97,7 +97,7 @@ export default function ResilienceIndex({ countryCode }) {
                 return (
                   <div key={p.key} style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{p.label}</span>
-                    <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(scoreColor(value)) }}>
+                    <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: scoreColor(value) }}>
                       {Math.round(value)}/100
                     </span>
                   </div>

@@ -26,23 +26,14 @@ export const US_EXPOSURE = '#a0aec0'
 export const CN_EXPOSURE = '#c9822b'
 export const LOCAL       = '#6c9a5b'
 export const CRIMSON     = '#b31942'
-// Text-safe crimson. CRIMSON is the brand/fill red, but as *text* on these dark
-// surfaces it's ~2.6–3.1:1 — below WCAG AA even for large text, and it all but
-// disappears on a projector. #ef4d6b holds 4.9–5.9:1 on BASE, SIDEBAR, RAISED
-// and BLACK. Use it wherever red colours text; fills, bars, swatches and
-// borders keep CRIMSON.
-export const CRIMSON_TEXT = '#ef4d6b'
 // Dim partner to CRIMSON (SCSP Dark Red). Currently unused: every crimson
-// surface in the app is a flat fill, swatch or text run. Defined here so the
-// third SCSP brand color has a home when the wordmark lands.
+// surface in the app is a flat fill, swatch or text run, and the globe's bloom
+// falloff is shared with the amber layer so it can't take a red tint. Defined
+// here so the third SCSP brand color has a home when the wordmark lands.
 export const CRIMSON_DIM = '#851432'
 export const HIGHLIGHT   = '#d6b36a'
 export const AMBER       = '#d97706'
 export const DIM         = '#3d4f6b'
-
-// For colour maps shared by fills and text (status / score colours): the tone
-// of `color` that's safe as text.
-export const textTone = (color) => (color === CRIMSON ? CRIMSON_TEXT : color)
 
 export const MONO        = '"IBM Plex Mono", "Fira Mono", monospace'
 export const SANS        = '"Inter", system-ui, sans-serif'

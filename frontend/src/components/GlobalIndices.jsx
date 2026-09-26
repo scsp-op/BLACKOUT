@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE, textTone } from '../theme'
+import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // Which sources this component renders, and how to label them.
 const SOURCES = [
@@ -78,7 +78,7 @@ export default function GlobalIndices({ countryCode }) {
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-                <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(color) }}>{row.classification}</span>
+                <span style={{ fontFamily: MONO, fontSize: TYPE.label, color }}>{row.classification}</span>
                 <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{Math.round(score)}/100 free</span>
               </div>
 
@@ -100,7 +100,7 @@ export default function GlobalIndices({ countryCode }) {
                         title={`${s.label} — ${value}/100 free · ${interval}`}
                       >
                         <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{s.label}</span>
-                        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(scoreColor(value)) }}>
+                        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: scoreColor(value) }}>
                           {Math.round(value)}/100
                         </span>
                       </div>

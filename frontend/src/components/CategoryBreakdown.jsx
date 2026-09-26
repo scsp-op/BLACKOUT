@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCategories } from '../lib/api'
-import { AMBER, BORDER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE, textTone } from '../theme'
+import { AMBER, BORDER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 const STATUS_COLOR = {
   HEAVILY_CENSORED: CRIMSON,
@@ -71,7 +71,7 @@ export default function CategoryBreakdown({ countryCode }) {
               <div style={{ flex: 1, height: 8, background: BORDER, position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${width}%`, background: color }} />
               </div>
-              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(color), width: 34, flexShrink: 0, textAlign: 'right' }}>
+              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color, width: 34, flexShrink: 0, textAlign: 'right' }}>
                 {Math.round(r.anomaly_rate * 100)}%
               </span>
             </div>
