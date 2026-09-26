@@ -3,6 +3,26 @@ import { BLACK, BORDER, BORDER_STRONG, CRIMSON, HIGHLIGHT, MONO, MUTED, RAISED, 
 import ScspLogo from './ScspLogo'
 import { COMPACT_HEADER_QUERY, useMediaQuery } from '../lib/useNarrow'
 
+// The SCSP logo links to SCSP's site, in a new tab like the source links in
+// the status bar, so the tool stays open behind it.
+const SCSP_URL = 'https://www.scsp.ai/'
+
+function ScspLink({ children }) {
+  return (
+    <a
+      href={SCSP_URL}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="scsp-link"
+      aria-label="Special Competitive Studies Project (opens scsp.ai)"
+      title="scsp.ai"
+      style={{ display: 'flex', flexShrink: 0 }}
+    >
+      {children}
+    </a>
+  )
+}
+
 const Divider = () => <span style={{ width: 1, height: 22, background: BORDER, flexShrink: 0 }} />
 
 // Accent- and case-insensitive key, so "cote" finds "Côte d'Ivoire".
@@ -287,13 +307,15 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <style>{`@keyframes outagePulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }`}</style>
+        <style>{`@keyframes outagePulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } } .scsp-link:hover { opacity: 0.75 }`}</style>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: TYPE.title, letterSpacing: '0.08em', color: WHITE, flexShrink: 0 }}>
             BLACKOUT
           </span>
           <CountryPicker value={selectedCode} options={options} onChange={onSelectCountry} fluid />
-          <ScspLogo height={24} color={WHITE} markOnly />
+          <ScspLink>
+            <ScspLogo height={24} color={WHITE} markOnly />
+          </ScspLink>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>{dock}</div>
       </header>
@@ -313,7 +335,7 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
         borderBottom: `1px solid ${BORDER}`,
       }}
     >
-      <style>{`@keyframes outagePulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }`}</style>
+      <style>{`@keyframes outagePulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } } .scsp-link:hover { opacity: 0.75 }`}</style>
       {/* Wordmark plus a one-line statement of what the tool measures. Without
           it "BLACKOUT" alone gives a first-time viewer nothing to anchor the
           globe and the panels to. */}
@@ -357,7 +379,9 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
             than a logo bolted on. WHITE rather than pure #fff: the mark sits
             at the same tone as the rest of the chrome text. */}
         <Divider />
-        <ScspLogo height={26} color={WHITE} markOnly={compactHeader} />
+        <ScspLink>
+          <ScspLogo height={26} color={WHITE} markOnly={compactHeader} />
+        </ScspLink>
       </div>
     </header>
   )
