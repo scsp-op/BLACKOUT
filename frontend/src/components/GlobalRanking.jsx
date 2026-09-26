@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getRankings } from '../lib/api'
-import { AMBER, BORDER, CRIMSON, DIM, HIGHLIGHT, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
+import { AMBER, BORDER, CRIMSON, DIM, HIGHLIGHT, LOCAL, MONO, MUTED, TYPE, WHITE, textTone } from '../theme'
 
 const SOURCES = [
   { key: 'V_DEM', short: 'V-DEM', label: 'V-Dem Freedom of Expression' },
@@ -114,7 +114,7 @@ export default function GlobalRanking() {
               <div style={{ flex: 1, height: 6, background: DIM, position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.max(2, Math.min(100, r.score_overall))}%`, background: color }} />
               </div>
-              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color, width: 24, flexShrink: 0, textAlign: 'right' }}>
+              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(color), width: 24, flexShrink: 0, textAlign: 'right' }}>
                 {Math.round(r.score_overall)}
               </span>
             </div>

@@ -17,7 +17,7 @@ import {
   GROUP_LABELS,
   hasTimeline,
 } from '../lib/blockingRegistry'
-import { BORDER, BORDER_STRONG, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, MONO, MUTED, SIDEBAR, TYPE, WHITE, textTone } from '../theme'
 
 const ALL_TECHNOLOGIES = Object.values(BLOCKING_REGISTRY).flat()
 
@@ -161,7 +161,7 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 22 }}>
         <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: WHITE, width: 96, flexShrink: 0 }}>{tech}</span>
         <BlockSegments filledCount={filledCount} color={color} />
-        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color, width: 86, flexShrink: 0 }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: textTone(color), width: 86, flexShrink: 0 }}>
           {BLOCKING_STATUS_LABEL[status]}
         </span>
         <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{count}</span>

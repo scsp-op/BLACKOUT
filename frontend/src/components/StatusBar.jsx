@@ -1,4 +1,4 @@
-import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { AMBER, BORDER, BORDER_STRONG, CRIMSON_TEXT, CYAN, LOCAL, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { SOURCES } from '../lib/sources'
 import { linkProps } from '../lib/router'
 
@@ -8,7 +8,7 @@ import { linkProps } from '../lib/router'
 const LINK = {
   loading: { color: AMBER, label: 'SYNCING' },
   ok: { color: LOCAL, label: 'LINK OK' },
-  error: { color: CRIMSON, label: 'LINK ERR' },
+  error: { color: CRIMSON_TEXT, label: 'LINK ERR' },
 }
 
 // Age of the underlying data, from /health. `last_updated` is stored as a
@@ -103,7 +103,7 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
         }
       >
         DATA AGE{' '}
-        <span className="tabular" style={{ color: stale ? CRIMSON : WHITE }}>
+        <span className="tabular" style={{ color: stale ? CRIMSON_TEXT : WHITE }}>
           {formatAge(dataAge)}
         </span>
       </span>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BLACK, BORDER, CRIMSON, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BLACK, BORDER, CRIMSON, CRIMSON_TEXT, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 import ScspLogo from './ScspLogo'
 
 const Divider = () => <span style={{ width: 1, height: 22, background: BORDER, flexShrink: 0 }} />
@@ -156,7 +156,7 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
           id="outages"
           label="OUTAGES"
           badge={counts.outages}
-          badgeColor={counts.outages > 0 ? CRIMSON : MUTED}
+          badgeColor={counts.outages > 0 ? CRIMSON_TEXT : MUTED}
           pulse={counts.outages > 0}
           open={openPanels.outages}
           onToggle={onTogglePanel}

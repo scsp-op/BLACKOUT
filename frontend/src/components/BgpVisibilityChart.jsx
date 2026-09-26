@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CRIMSON, CYAN, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, CRIMSON_TEXT, CYAN, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const MAX_TICKS = 6
 
@@ -136,7 +136,7 @@ export default function BgpVisibilityChart({ countryCode }) {
 
       <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
         {chartData[chartData.length - 1].visiblePct < 50 && (
-          <span style={{ color: CRIMSON }}>
+          <span style={{ color: CRIMSON_TEXT }}>
             &lt;50% of registered ASNs currently visible ·{' '}
           </span>
         )}

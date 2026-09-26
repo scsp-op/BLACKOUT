@@ -24,7 +24,7 @@ import {
   getSatelliteOrbit,
   getStarlinkStatus,
 } from './lib/api'
-import { BASE, BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE } from './theme'
+import { BASE, BORDER, CRIMSON_TEXT, MONO, MUTED, SIDEBAR, TYPE } from './theme'
 import './App.css'
 
 // Widths of the floating dock columns: left (Space Tracking + Ranking) and
@@ -636,7 +636,7 @@ export default function App() {
               <DockPanel
                 title="INTERNET OUTAGES"
                 accessory={
-                  <span className="tabular" style={{ fontFamily: MONO, fontSize: TYPE.label, color: outages.length ? CRIMSON : MUTED }}>
+                  <span className="tabular" style={{ fontFamily: MONO, fontSize: TYPE.label, color: outages.length ? CRIMSON_TEXT : MUTED }}>
                     {outages.length}
                   </span>
                 }

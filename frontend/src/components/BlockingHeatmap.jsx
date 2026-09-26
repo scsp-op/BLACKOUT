@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { AMBER, BORDER, CRIMSON, DIM, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { AMBER, BORDER, CRIMSON, CRIMSON_TEXT, DIM, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { BLOCKING_STATUS_COLOR } from '../lib/blockingRegistry'
 import { getGeo } from '../lib/api'
 
@@ -184,7 +184,7 @@ export default function BlockingHeatmap({ rows }) {
                         <div style={{ width: `${confW}%`, background: CRIMSON }} />
                         <div style={{ width: `${likeW}%`, background: AMBER }} />
                       </div>
-                      <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: t.blocked > 0 ? CRIMSON : MUTED, width: 24, flexShrink: 0, textAlign: 'right' }}>
+                      <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: t.blocked > 0 ? CRIMSON_TEXT : MUTED, width: 24, flexShrink: 0, textAlign: 'right' }}>
                         {t.blocked}
                       </span>
                     </button>

@@ -10,7 +10,7 @@ import {
   YAxis,
   ZAxis,
 } from 'recharts'
-import { BORDER, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, MONO, MUTED, SIDEBAR, TYPE, WHITE, textTone } from '../theme'
 import { SEVERITY_COLOR, severityLabel } from './OutageFeed'
 
 // Severity bands, bottom to top, as y positions 0/1/2.
@@ -35,7 +35,7 @@ function OutageTooltip({ active, payload }) {
   return (
     <div style={{ background: SIDEBAR, border: `1px solid ${BORDER}`, padding: '6px 8px', fontFamily: MONO, fontSize: TYPE.label }}>
       <div style={{ color: WHITE }}>{new Date(p.t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-      <div style={{ color: SEVERITY_COLOR[p.severity] }}>{p.severity.toLowerCase()} · {formatDuration(p.durationSecs)}</div>
+      <div style={{ color: textTone(SEVERITY_COLOR[p.severity]) }}>{p.severity.toLowerCase()} · {formatDuration(p.durationSecs)}</div>
       <div style={{ color: MUTED }}>IODA score {Math.round(p.score)}</div>
       <div style={{ color: MUTED }}>source: {p.datasource}</div>
     </div>
