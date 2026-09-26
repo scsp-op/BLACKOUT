@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import MethodologyDoc from './MethodologyDoc'
 import { getMethodologyIndex } from '../lib/api'
-import { linkProps } from '../lib/router'
+import { globePath, linkProps } from '../lib/router'
 import { splitNumber } from '../lib/toc'
-import { BASE, BORDER, BORDER_STRONG, CYAN, DIM, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, WHITE } from '../theme'
+import { BASE, BORDER, BORDER_STRONG, CYAN, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // The documents render over the globe rather than in place of it: App owns a
 // Cesium viewer and roughly a dozen mount-time fetches, and tearing that down
@@ -31,6 +31,7 @@ function Divider() {
 // what is inside each answers the question they actually have. The section
 // titles come from the index endpoint, which already had them.
 function DocPanel({ doc }) {
+  const numbered = doc.sections.some((section) => splitNumber(section).number)
   return (
     <a
       {...linkProps(`/methodology/${doc.slug}`)}
@@ -52,10 +53,10 @@ function DocPanel({ doc }) {
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.1em', color: WHITE }}>
           {doc.kind}
         </span>
-        <span className="tabular" style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', color: MUTED }}>
+        <span className="tabular" style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.08em', color: MUTED }}>
           {doc.sections.length} SECTIONS · {doc.word_count.toLocaleString()} WORDS
         </span>
       </div>
@@ -70,18 +71,22 @@ function DocPanel({ doc }) {
       </div>
 
       {/* The contents, in the same numbered-gutter shape as the rail beside an
-          open document, so the two read as the same list. */}
+          open document, so the two read as the same list. A document with no
+          numbered sections gets no gutter — an empty one indented its list
+          past the card's own title and text. */}
       <div style={{ borderTop: `1px solid ${BORDER}`, padding: '8px 0 10px' }}>
         {doc.sections.map((section, i) => {
           const { number, title } = splitNumber(section)
           return (
             <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 12px' }}>
-              <span
-                className="tabular"
-                style={{ fontFamily: MONO, fontSize: 10.5, width: 18, flexShrink: 0, color: DIM, paddingTop: 1 }}
-              >
-                {number ?? ''}
-              </span>
+              {numbered && (
+                <span
+                  className="tabular"
+                  style={{ fontFamily: MONO, fontSize: TYPE.label, width: 18, flexShrink: 0, color: MUTED, paddingTop: 1 }}
+                >
+                  {number ?? ''}
+                </span>
+              )}
               <span style={{ fontFamily: SANS, fontSize: 12.5, lineHeight: 1.45, color: '#aab3c0' }}>{title}</span>
             </div>
           )
@@ -183,12 +188,12 @@ export default function Methodology({ path }) {
         `}</style>
 
         <a
-          {...linkProps('/')}
+          {...linkProps(globePath())}
           style={{
             fontFamily: SANS,
             fontWeight: 600,
-            fontSize: 13,
-            letterSpacing: '0.14em',
+            fontSize: TYPE.title,
+            letterSpacing: '0.08em',
             color: WHITE,
             textDecoration: 'none',
             flexShrink: 0,
@@ -199,21 +204,24 @@ export default function Methodology({ path }) {
 
         <Divider />
 
-        {/* A real button rather than a 9px caption. It is the only way back
-            to the index from inside a document, and at chrome sizing it read
-            as a label you were not meant to press. Bordered, padded and set
-            at 11.5px, it borrows GlobalRanking's V-DEM/RSF toggle exactly —
-            including the HIGHLIGHT border that marks the one you are on. */}
+        {/* A real button rather than a caption: it is the only way back to
+            the index from inside a document. Styled exactly like the main
+            header's dock buttons (RANKING / OUTAGES / SATELLITES) — gold
+            border and raised fill on the index itself, where it's "open". */}
         <a
           {...linkProps('/methodology')}
           className="methodology-tab"
           style={{
+            height: 30,
+            display: 'flex',
+            alignItems: 'center',
             fontFamily: MONO,
-            fontSize: 11.5,
-            letterSpacing: '0.14em',
-            padding: '5px 12px',
+            fontSize: TYPE.label,
+            letterSpacing: '0.08em',
+            padding: '0 10px',
+            background: slug ? 'transparent' : RAISED,
             border: `1px solid ${slug ? BORDER : HIGHLIGHT}`,
-            color: slug ? MUTED : HIGHLIGHT,
+            color: slug ? WHITE : HIGHLIGHT,
             textDecoration: 'none',
             flexShrink: 0,
           }}
@@ -222,12 +230,12 @@ export default function Methodology({ path }) {
         </a>
 
         <a
-          {...linkProps('/')}
+          {...linkProps(globePath())}
           className="methodology-nav"
           style={{
             marginLeft: 'auto',
             fontFamily: MONO,
-            fontSize: 10.5,
+            fontSize: TYPE.label,
             letterSpacing: '0.12em',
             color: MUTED,
             textDecoration: 'none',

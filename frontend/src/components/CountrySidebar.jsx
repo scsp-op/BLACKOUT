@@ -17,7 +17,7 @@ import {
   GROUP_LABELS,
   hasTimeline,
 } from '../lib/blockingRegistry'
-import { BORDER, BORDER_STRONG, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, MONO, MUTED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const ALL_TECHNOLOGIES = Object.values(BLOCKING_REGISTRY).flat()
 
@@ -45,7 +45,10 @@ function ThemeSection({ title, first, children }) {
         borderTop: first ? 'none' : `1px solid ${BORDER_STRONG}`,
       }}
     >
-      <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.14em', color: WHITE }}>{title}</div>
+      {/* Inter semibold, sentence case: the one level that isn't mono caps,
+          so a section title reads as a heading rather than as another of the
+          per-widget labels beneath it (which differed only by colour). */}
+      <div style={{ fontFamily: SANS, fontSize: TYPE.title, fontWeight: 600, color: WHITE }}>{title}</div>
       {children}
     </section>
   )
@@ -101,7 +104,7 @@ function hasEnoughTimeline(timelineRows) {
 // the data has not arrived or because the source does not cover this country.
 function SectionState({ loading, emptyLabel }) {
   return (
-    <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED }}>
+    <p style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED }}>
       {loading ? 'LOADING\u2026' : emptyLabel}
     </p>
   )
@@ -123,8 +126,8 @@ function BlockingGroupList({ groups, blockingByTech, timelineByTech, countryCode
             <p
               style={{
                 fontFamily: MONO,
-                fontSize: 9,
-                letterSpacing: '0.1em',
+                fontSize: TYPE.label,
+                letterSpacing: '0.06em',
                 textTransform: 'uppercase',
                 color: MUTED,
                 marginBottom: 2,
@@ -159,12 +162,12 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 22 }}>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: WHITE, width: 100, flexShrink: 0 }}>{tech}</span>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: WHITE, width: 96, flexShrink: 0 }}>{tech}</span>
         <BlockSegments filledCount={filledCount} color={color} />
-        <span style={{ fontFamily: MONO, fontSize: 10, color, width: 72, flexShrink: 0 }}>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color, width: 86, flexShrink: 0 }}>
           {BLOCKING_STATUS_LABEL[status]}
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED }}>{count}</span>
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{count}</span>
       </div>
       {showTimeline && (
         <div style={{ padding: '6px 0 6px 0' }}>
@@ -175,7 +178,7 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
   )
 }
 
-export default function CountrySidebar({ country, layer, starlinkStatus, ixpStats, onClose }) {
+export default function CountrySidebar({ country, layer, starlinkStatus, ixpStats, onClose, fill = false }) {
   const [blockingRows, setBlockingRows] = useState([])
   const [blockingLoading, setBlockingLoading] = useState(true)
   const [timelineByTech, setTimelineByTech] = useState({})
@@ -257,25 +260,26 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   return (
     <div
       style={{
-        width: 380,
-        minWidth: 340,
+        // `fill`: the phone bottom sheet, which sets its own width.
+        width: fill ? '100%' : 360,
+        minWidth: fill ? 0 : 360,
         height: '100%',
         overflowY: 'auto',
         background: SIDEBAR,
-        borderLeft: `1px solid ${BORDER}`,
+        borderLeft: fill ? 'none' : `1px solid ${BORDER}`,
       }}
     >
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 500, color: WHITE }}>{country.country_name}</h2>
-            <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.05em', color: MUTED }}>
+            <h2 style={{ fontSize: TYPE.display, fontWeight: 600, color: WHITE }}>{country.country_name}</h2>
+            <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.05em', color: MUTED }}>
               {country.country_code}
             </span>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: MUTED, fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
+            style={{ background: 'transparent', border: 'none', color: MUTED, fontSize: TYPE.display, lineHeight: 1, cursor: 'pointer' }}
           >
             ×
           </button>
@@ -283,22 +287,23 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
       </div>
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-        <ThemeSection title="NETWORK & PROTOCOL" first>
-          <OutageTimeline countryCode={country.country_code} />
+        {/* Ordered for a policy reader: the headline freedom scores first,
+            then what's blocked (messaging, AI, content, circumvention tools),
+            and the technical network measurements last. */}
+        <ThemeSection title="Freedom & resilience" first>
+          <GlobalIndices countryCode={country.country_code} />
 
-          <Http3ShareChart countryCode={country.country_code} />
+          <ResilienceIndex countryCode={country.country_code} />
+        </ThemeSection>
 
-          <BgpVisibilityChart countryCode={country.country_code} />
-
-          <IxpBadge entry={ixpStats} />
-
-          <StarlinkBadge entry={starlinkStatus} />
+        <ThemeSection title="Messaging">
+          <MessagingStatus countryCode={country.country_code} />
         </ThemeSection>
 
         {showAiAccess && (
-          <ThemeSection title="AI ACCESS">
+          <ThemeSection title="AI access">
             <div>
-              <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+              <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
               </div>
               {aiAccessGroups.length > 0 ? (
@@ -316,18 +321,14 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
           </ThemeSection>
         )}
 
-        <ThemeSection title="CENSORSHIP">
+        <ThemeSection title="Censorship">
           <CategoryBreakdown countryCode={country.country_code} />
         </ThemeSection>
 
-        <ThemeSection title="MESSAGING">
-          <MessagingStatus countryCode={country.country_code} />
-        </ThemeSection>
-
-        <ThemeSection title="CIRCUMVENTION">
+        <ThemeSection title="Circumvention">
           {showCircumvention && (
             <div>
-              <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+              <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
               </div>
               {circumventionGroups.length > 0 ? (
@@ -353,10 +354,16 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
           <TorChart countryCode={country.country_code} />
         </ThemeSection>
 
-        <ThemeSection title="RESILIENCE & FREEDOM INDICES">
-          <ResilienceIndex countryCode={country.country_code} />
+        <ThemeSection title="Network & protocol">
+          <OutageTimeline countryCode={country.country_code} />
 
-          <GlobalIndices countryCode={country.country_code} />
+          <Http3ShareChart countryCode={country.country_code} />
+
+          <BgpVisibilityChart countryCode={country.country_code} />
+
+          <IxpBadge entry={ixpStats} />
+
+          <StarlinkBadge entry={starlinkStatus} />
         </ThemeSection>
       </div>
     </div>

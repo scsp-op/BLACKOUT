@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getMessaging } from '../lib/api'
 import { BLOCKING_STATUS_COLOR, BLOCKING_STATUS_LABEL } from '../lib/blockingRegistry'
-import { BORDER, MONO, MUTED, WHITE } from '../theme'
+import { BORDER, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // technology_blocks stores messaging apps under keys; map to display names.
 const APP_LABEL = {
@@ -50,17 +50,17 @@ export default function MessagingStatus({ countryCode }) {
   if (label) {
     return (
       <section>
-        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+        <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
           MESSAGING APPS
         </div>
-        <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED }}>{label}</p>
+        <p style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED }}>{label}</p>
       </section>
     )
   }
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         MESSAGING APPS
       </div>
 
@@ -80,8 +80,8 @@ export default function MessagingStatus({ countryCode }) {
               }}
             >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, color: WHITE }}>{APP_LABEL[r.technology] ?? r.technology}</span>
-              <span style={{ fontFamily: MONO, fontSize: 8, color, letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: TYPE.body, color: WHITE }}>{APP_LABEL[r.technology] ?? r.technology}</span>
+              <span style={{ fontFamily: MONO, fontSize: TYPE.tick, color, letterSpacing: '0.05em' }}>
                 {BLOCKING_STATUS_LABEL[r.status] ?? r.status}
               </span>
             </div>

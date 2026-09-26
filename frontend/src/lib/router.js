@@ -1,7 +1,8 @@
-// A three-route router, hand-rolled.
+// A small router, hand-rolled.
 //
-// The app has exactly one non-globe destination — the methodology documents —
-// which is `/methodology`, `/methodology/value` and `/methodology/technical`.
+// Routes: the globe `/`, a selected country `/country/XX` (see App.jsx), the
+// methodology documents — `/methodology`, `/methodology/value` and
+// `/methodology/technical` — and the privacy notice `/privacy`.
 // That does not pay for react-router: the hard part of client-side routing is
 // making a deep link survive a refresh, and the backend already does it.
 // `fallback_service(spa_service(..))` in main.rs serves index.html for any path
@@ -16,6 +17,22 @@ import { useEffect, useState } from 'react'
 // are the same route, and `/` survives as `/` rather than collapsing to ''.
 function currentPath() {
   return window.location.pathname.replace(/\/+$/, '') || '/'
+}
+
+// The last path outside the document overlays (/methodology, /privacy) — the
+// globe, or a /country/XX link. The documents' "back to the globe" links go
+// here, so returning from them keeps the country that was open rather than
+// resetting to the bare globe.
+const isDocs = (path) => path === '/privacy' || path === '/methodology' || path.startsWith('/methodology/')
+let lastGlobePath = isDocs(currentPath()) ? '/' : currentPath()
+window.addEventListener('popstate', () => {
+  const path = currentPath()
+  if (!isDocs(path)) lastGlobePath = path
+})
+
+/** Where "back to the globe" should go (see `lastGlobePath`). */
+export function globePath() {
+  return lastGlobePath
 }
 
 /** The current path, kept in sync with Back/Forward and with `navigate`. */
@@ -39,9 +56,10 @@ export function useRoute() {
  * is what lets `useRoute` have a single subscription that covers both our own
  * navigations and the browser's back button.
  */
-export function navigate(path) {
+export function navigate(path, { replace = false } = {}) {
   if (path === currentPath()) return
-  window.history.pushState({}, '', path)
+  if (replace) window.history.replaceState({}, '', path)
+  else window.history.pushState({}, '', path)
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 

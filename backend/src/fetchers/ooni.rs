@@ -788,7 +788,10 @@ fn category_label(code: &str) -> String {
     let label = match code {
         "ALDR" => "Alcohol & Drugs",
         "REL" => "Religion",
-        "PORN" => "Pornography",
+        // Citizen Lab's legend says "Pornography"; shown as "Adult Content".
+        // Renaming a label here also needs an entry in db::migrations'
+        // CATEGORY_RELABELS, since labels are stored at fetch time.
+        "PORN" => "Adult Content",
         "PROV" => "Provocative Attire",
         "POLR" => "Political Criticism",
         "HUMR" => "Human Rights",

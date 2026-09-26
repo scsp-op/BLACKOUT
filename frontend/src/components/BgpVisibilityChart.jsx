@@ -9,7 +9,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CRIMSON, CYAN, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, CRIMSON, CYAN, MONO, MUTED, TYPE } from '../theme'
+import { CURSOR_ONLY, ChartTitle, Readout, useChartHover } from './chartHover'
 
 const MAX_TICKS = 6
 
@@ -57,6 +58,7 @@ function asnVisibilityPct(row) {
 export default function BgpVisibilityChart({ countryCode }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
+  const [hover, hoverHandlers] = useChartHover()
 
   useEffect(() => {
     let cancelled = false
@@ -88,40 +90,36 @@ export default function BgpVisibilityChart({ countryCode }) {
   if (chartData.length === 0) return null
 
   const ticks = monthlyTicks(rows)
+  const hovered = hover != null ? chartData[hover] : null
   const latestWithPrefixes = [...rows].reverse().find((r) => r.routed_v4_prefixes != null)
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <ChartTitle readout={hovered && <Readout value={`${hovered.visiblePct.toFixed(1)}%`} detail={hovered.date} />}>
         BGP PREFIX VISIBILITY
-      </div>
+      </ChartTitle>
       <div style={{ width: '100%', height: 140 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 6, right: 4, bottom: 0, left: 0 }} {...hoverHandlers}>
             <CartesianGrid stroke={BORDER} vertical={false} />
             <XAxis
               dataKey="date"
               ticks={ticks}
               tickFormatter={(d) => d.slice(0, 7)}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
             />
             <YAxis
               domain={[0, 110]}
-              tick={{ fill: MUTED, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: MUTED, fontSize: TYPE.tick, fontFamily: MONO }}
               axisLine={{ stroke: BORDER }}
               tickLine={false}
-              width={32}
+              width={38}
               unit="%"
             />
             <ReferenceLine y={100} stroke={MUTED} strokeDasharray="3 3" />
-            <Tooltip
-              contentStyle={{ background: SIDEBAR, border: `1px solid ${BORDER}`, borderRadius: 0, fontSize: 11, fontFamily: MONO }}
-              labelStyle={{ color: WHITE }}
-              itemStyle={{ color: MUTED }}
-              formatter={(value) => `${value.toFixed(1)}%`}
-            />
+            <Tooltip {...CURSOR_ONLY} />
             <Line
               type="monotone"
               dataKey="visiblePct"
@@ -134,7 +132,7 @@ export default function BgpVisibilityChart({ countryCode }) {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
         {chartData[chartData.length - 1].visiblePct < 50 && (
           <span style={{ color: CRIMSON }}>
             &lt;50% of registered ASNs currently visible ·{' '}

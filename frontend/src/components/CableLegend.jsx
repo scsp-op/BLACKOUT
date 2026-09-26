@@ -1,4 +1,4 @@
-import { BORDER, BORDER_STRONG, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // Static/decorative infrastructure context, not a censorship signal — a
 // single binary toggle (unlike SatelliteLegend's multi-select), default off
@@ -10,28 +10,33 @@ import { BORDER, BORDER_STRONG, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, WHITE }
 // tried earlier (squeezed next to OutageFeed, then stacked under SPACE
 // TRACKING) each broke at some combination of viewport width and sidebar
 // state; a flex-centered group has no such dependency.
-export default function CableLegend({ show, onToggle, routeCount, landingCount }) {
+//
+// `compact` is the phone-width variant: short title, no counts (they stay in
+// the tooltip).
+export default function CableLegend({ show, onToggle, routeCount, landingCount, compact = false }) {
   return (
     <div
       title={`${routeCount} cables · ${landingCount} landing points · via TeleGeography`}
       style={{
         background: SIDEBAR,
         border: `1px solid ${BORDER}`,
-        padding: '4px 10px',
+        padding: compact ? '4px 8px' : '4px 10px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
+        gap: compact ? 6 : 10,
         flexShrink: 0,
         whiteSpace: 'nowrap',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.09em', color: WHITE }}>
-          SUBMARINE CABLES
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: WHITE }}>
+          {compact ? 'CABLES' : 'SUBMARINE CABLES'}
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.03em', color: MUTED }}>
-          {routeCount} routes · {landingCount} landings
-        </span>
+        {!compact && (
+          <span style={{ fontFamily: MONO, fontSize: TYPE.tick, letterSpacing: '0.03em', color: MUTED }}>
+            {routeCount} routes · {landingCount} landings
+          </span>
+        )}
       </div>
 
       <button
@@ -43,11 +48,11 @@ export default function CableLegend({ show, onToggle, routeCount, landingCount }
           border: `1px solid ${show ? HIGHLIGHT : BORDER_STRONG}`,
           color: show ? HIGHLIGHT : WHITE,
           fontFamily: MONO,
-          fontSize: 8,
+          fontSize: TYPE.tick,
           letterSpacing: '0.08em',
-          padding: '4px 10px',
-          minWidth: 52,
-          marginLeft: 4,
+          padding: compact ? '4px 8px' : '4px 10px',
+          minWidth: compact ? 44 : 52,
+          marginLeft: compact ? 0 : 4,
           cursor: 'pointer',
         }}
       >

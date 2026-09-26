@@ -1,4 +1,4 @@
-import { BORDER, HIGHLIGHT, MONO, MUTED, RAISED, SIDEBAR, WHITE } from '../theme'
+import { BORDER, HIGHLIGHT, MONO, MUTED, RAISED, TYPE, WHITE } from '../theme'
 
 // Single source of truth for the satellite category taxonomy — the backend
 // tags each object with one of these keys (see backend/src/fetchers/
@@ -51,7 +51,7 @@ function backgroundKeysFrom(counts) {
 // than six sibling filters. The title needs no rule of its own — spacing
 // already sets it apart, and a second line made the panel look striped.
 const RowDivider = () => (
-  <span aria-hidden="true" style={{ height: 1, background: BORDER, margin: '3px 0' }} />
+  <span aria-hidden="true" style={{ height: 1, background: BORDER, margin: '3px 10px' }} />
 )
 
 // `hollow` marks the aggregate row: "All Satellites" is not a category, so it
@@ -66,7 +66,7 @@ function Row({ active, color, label, count, onClick, hollow }) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
         width: '100%',
         // Selection reads as a highlighted row with a bar in the row's own
         // colour, which works identically on every row and says *which* layer
@@ -75,7 +75,9 @@ function Row({ active, color, label, count, onClick, hollow }) {
         background: active ? RAISED : 'transparent',
         border: 'none',
         borderLeft: `2px solid ${active ? color : 'transparent'}`,
-        padding: '2px 0 2px 5px',
+        // Same row rhythm as the other panel lists (Ranking, Outages): 4px
+        // vertical, text 10px in from the edge (8px + the 2px selection bar).
+        padding: '4px 10px 4px 8px',
         cursor: 'pointer',
         textAlign: 'left',
       }}
@@ -91,21 +93,14 @@ function Row({ active, color, label, count, onClick, hollow }) {
           flexShrink: 0,
         }}
       />
-      <span
-        style={{
-          fontFamily: MONO,
-          fontSize: 10,
-          letterSpacing: '0.03em',
-          color: active ? WHITE : MUTED,
-          flex: 1,
-          whiteSpace: 'nowrap',
-        }}
-      >
+      {/* Inter for the name, mono for the figure — the convention every other
+          panel list follows. */}
+      <span style={{ fontSize: TYPE.body, color: WHITE, flex: 1, whiteSpace: 'nowrap' }}>
         {label}
       </span>
       {/* paddingLeft, not a bigger row `gap`: the gap also sits between the
           swatch and the label, and only this column needs the breathing room. */}
-      <span style={{ fontFamily: MONO, fontSize: 9, paddingLeft: 8, color: active ? WHITE : MUTED }}>
+      <span style={{ fontFamily: MONO, fontSize: TYPE.label, paddingLeft: 8, color: active ? WHITE : MUTED }}>
         {count.toLocaleString()}
       </span>
     </button>
@@ -125,100 +120,85 @@ export default function SatelliteLegend({ selection, onSelect, counts }) {
   const backgroundCount = backgroundKeys.reduce((n, k) => n + (counts[k] ?? 0), 0)
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 12,
-        // GlobalRanking ("Most Censored Countries") occupies the whole left
-        // edge at left:12, width:264 — sit just to its right, not on top of it.
-        left: 292,
-        background: SIDEBAR,
-        border: `1px solid ${BORDER}`,
-        padding: '6px 8px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        // Sized off the longest row, "Stations / Telescopes" (132px at MONO
-        // 10px/0.03em), plus room for a 4-digit count. At the previous 196px
-        // the widest label and a 5-digit count summed to exactly the space
-        // available, so the two columns touched.
-        width: 208,
-        zIndex: 5,
-      }}
-    >
+    // Unpositioned — App renders this inside the header dock's SPACE TRACKING
+    // panel (DockPanel), which supplies the frame, title and close control.
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Toolbar row, styled like the Ranking panel's SOURCE row: a ruled
+          strip with its label left and the toggle right. */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 6,
+          gap: 4,
+          padding: '6px 10px',
+          borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
-          SPACE TRACKING
+        <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginRight: 'auto' }}>
+          SHOW
         </span>
         <button
           type="button"
           onClick={() => onSelect('none')}
           aria-pressed={selection === 'none'}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
             background: 'transparent',
-            // Transparent until active: two boxed elements in a 196px header
-            // row had the clear-layer button competing with the panel title.
-            border: `1px solid ${selection === 'none' ? HIGHLIGHT : 'transparent'}`,
+            border: `1px solid ${selection === 'none' ? HIGHLIGHT : BORDER}`,
             color: selection === 'none' ? HIGHLIGHT : MUTED,
             fontFamily: MONO,
-            fontSize: 9,
-            letterSpacing: '0.08em',
+            fontSize: TYPE.label,
+            letterSpacing: '0.05em',
             padding: '2px 5px',
+            whiteSpace: 'nowrap',
             cursor: 'pointer',
           }}
         >
-          NONE ✕
+          {/* No ✕ glyph: the panel's own close control sits just above, and
+              this one clears the layer rather than closing anything. */}
+          NONE
         </button>
       </div>
 
-      <Row
-        active={selection === 'all'}
-        color={selection === 'all' ? WHITE : MUTED}
-        hollow
-        label="All Satellites"
-        count={counts.total ?? 0}
-        onClick={() => onSelect('all')}
-      />
-      <RowDivider />
-
-      {SPACE_TRACKING_OPTIONS.map(({ key, label }) => (
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
         <Row
-          key={key}
-          active={selection === key}
-          color={CATEGORY_COLOR_HEX[key]}
-          label={label}
-          count={counts[key] ?? 0}
-          onClick={() => onSelect(key)}
+          active={selection === 'all'}
+          color={selection === 'all' ? WHITE : MUTED}
+          hollow
+          label="All Satellites"
+          count={counts.total ?? 0}
+          onClick={() => onSelect('all')}
         />
-      ))}
+        <RowDivider />
 
-      {/* Everything the backend tags outside the five rows above. The key is a
-          comma-separated list because /api/satellites takes one (see
-          SatellitesQuery.categories), so this row filters the globe like any
-          other. One swatch stands for both background neutrals — they are two
-          near-identical slates by design.
+        {SPACE_TRACKING_OPTIONS.map(({ key, label }) => (
+          <Row
+            key={key}
+            active={selection === key}
+            color={CATEGORY_COLOR_HEX[key]}
+            label={label}
+            count={counts[key] ?? 0}
+            onClick={() => onSelect(key)}
+          />
+        ))}
 
-          Labelled "Other", not "Unclassified": the bucket includes `geo`,
-          which is a real classification, and on a tool that lists "Military /
-          Intel" two rows up, "unclassified" reads as a security marking rather
-          than "uncategorised". */}
-      <Row
-        active={selection === backgroundSelection}
-        color={CATEGORY_COLOR_HEX.geo}
-        label="Other"
-        count={backgroundCount}
-        onClick={() => onSelect(backgroundSelection)}
-      />
+        {/* Everything the backend tags outside the five rows above. The key is a
+            comma-separated list because /api/satellites takes one (see
+            SatellitesQuery.categories), so this row filters the globe like any
+            other. One swatch stands for both background neutrals — they are two
+            near-identical slates by design.
+
+            Labelled "Other", not "Unclassified": the bucket includes `geo`,
+            which is a real classification, and on a tool that lists "Military /
+            Intel" two rows up, "unclassified" reads as a security marking rather
+            than "uncategorised". */}
+        <Row
+          active={selection === backgroundSelection}
+          color={CATEGORY_COLOR_HEX.geo}
+          label="Other"
+          count={backgroundCount}
+          onClick={() => onSelect(backgroundSelection)}
+        />
+      </div>
     </div>
   )
 }

@@ -55,6 +55,10 @@ function outageRadius(score) {
 // so this, not a starfield texture, is what fills it).
 const SPACE_BG = '#03060a'
 
+// Cesium's default camera FOV (60°), applied to the canvas's wider axis. The
+// preRender hook in init derives the actual FOV from it (see there).
+const BASE_FOV = Math.PI / 3
+
 // Whole-globe framing, centred on ~20°E/15°N rather than 0/0 so the front
 // hemisphere on load holds Europe, Africa, the Middle East and South Asia — the
 // densest censorship geography — instead of the mid-Atlantic.
@@ -207,6 +211,17 @@ export default function Globe({
   satelliteOrbit = null,
   cables = null,
   showCables = false,
+  // Horizontal shift, in CSS px, of where the globe's centre sits within the
+  // host (<main>): App passes half the difference between the floating dock
+  // columns on each side, so the globe centres in the gap between them.
+  offsetX = 0,
+  // Share (0–1) of the host's height covered from the bottom — the phone
+  // layout's country bottom sheet. The globe's centre moves up into the middle
+  // of what's left visible, the vertical counterpart of `offsetX`.
+  coverBottom = 0,
+  // Same, from the right (the country sheet on a phone held in landscape).
+  // Takes precedence over `offsetX`, which is the desktop dock-column shift.
+  coverRight = 0,
 }) {
   const containerRef = useRef(null)
   const viewerRef = useRef(null)
@@ -321,6 +336,37 @@ export default function Globe({
       viewer.scene.skyBox.show = false
       viewer.scene.sun.show  = false
       viewer.scene.moon.show = false
+
+      // Keep the globe's on-screen size independent of the container's size.
+      // The container is enlarged past <main> to shift the globe's centre (see
+      // `offsetX` / `coverBottom` in the returned element), and Cesium derives
+      // the projection from the canvas — so a larger canvas would shrink the
+      // globe. Each frame, set the FOV so the projection's pixels-per-radian
+      // match what an exactly <main>-sized canvas would give: the vertical FOV
+      // scales with the extra height, and the horizontal one follows the
+      // canvas aspect. Per frame, so window resizes and the size transition
+      // are tracked without extra plumbing; a no-op when nothing changed.
+      viewer.scene.preRender.addEventListener(() => {
+        const container = containerRef.current
+        const host = container?.parentElement
+        if (!host || !host.clientHeight || !container.clientHeight || !container.clientWidth) return
+        const hostAspect = host.clientWidth / host.clientHeight
+        const canvasAspect = container.clientWidth / container.clientHeight
+        // Vertical FOV an exactly host-sized canvas would have (Cesium applies
+        // BASE_FOV to the wider axis)…
+        const hostFovy = hostAspect <= 1
+          ? BASE_FOV
+          : 2 * Math.atan(Math.tan(BASE_FOV / 2) / hostAspect)
+        // …stretched to the taller canvas at the same pixel scale…
+        const fovy = 2 * Math.atan(Math.tan(hostFovy / 2) * (container.clientHeight / host.clientHeight))
+        // …and expressed as Cesium's `fov`, which is horizontal when wide.
+        const fov = canvasAspect <= 1
+          ? fovy
+          : 2 * Math.atan(Math.tan(fovy / 2) * canvasAspect)
+        if (Math.abs(viewer.camera.frustum.fov - fov) > 1e-6) {
+          viewer.camera.frustum.fov = fov
+        }
+      })
 
       viewerRef.current = viewer
 
@@ -924,5 +970,27 @@ export default function Globe({
     }
   }, [ready, selectedCode, geoByCode])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  // Off-centring the globe by widening its container rather than offsetting
+  // the camera frustum: Cesium's pick rays ignore frustum offsets (clicks
+  // would land beside the country under the cursor), while its mouse
+  // handling measures from the canvas's bounding rect, so a moved/widened
+  // canvas picks correctly for free. The container extends by 2·|offsetX|
+  // past <main> on the side away from the shift — its centre then sits
+  // offsetX from <main>'s, and the overflow is clipped by <main> — so the
+  // globe moves without exposing an uncovered strip at either edge.
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'absolute',
+        // Vertically the same trick: extending the top by the covered share
+        // puts the centre in the middle of the uncovered part.
+        top: `${-coverBottom * 100}%`,
+        height: `${100 + coverBottom * 100}%`,
+        left: coverRight ? `${-coverRight * 100}%` : Math.min(0, 2 * offsetX),
+        width: coverRight ? `${100 + coverRight * 100}%` : `calc(100% + ${2 * Math.abs(offsetX)}px)`,
+        transition: 'left 200ms ease, width 200ms ease, top 200ms ease, height 200ms ease',
+      }}
+    />
+  )
 }

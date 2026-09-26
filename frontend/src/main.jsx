@@ -2,12 +2,27 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import Methodology from './components/Methodology'
+import Privacy from './components/Privacy'
 import { useRoute } from './lib/router'
+// Fonts are bundled with the app (self-hosted via @fontsource) rather than
+// loaded from Google Fonts, which sent every visitor's IP address to Google on
+// page load — the one third-party request the tool made. Only the weights the
+// UI uses.
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/ibm-plex-mono/400.css'
+import '@fontsource/ibm-plex-mono/500.css'
+import '@fontsource/ibm-plex-mono/600.css'
 import './index.css'
 
 function Root() {
   const path = useRoute()
   const inMethodology = path === '/methodology' || path.startsWith('/methodology/')
+  const inPrivacy = path === '/privacy'
+  // Both document overlays (methodology, privacy) cover the globe the same way.
+  const inOverlay = inMethodology || inPrivacy
 
   // App boots a Cesium viewer and around a dozen fetches on mount, so it is
   // mounted once and then kept — navigating to the documents and back must not
@@ -18,15 +33,16 @@ function Root() {
   // /methodology URL — a shared link, or a refresh while reading. There the
   // globe has never been wanted, so it is not mounted at all until the reader
   // asks for it, and the deep link costs a document instead of a globe.
-  const [globeMounted, setGlobeMounted] = useState(!inMethodology)
+  const [globeMounted, setGlobeMounted] = useState(!inOverlay)
   useEffect(() => {
-    if (!inMethodology) setGlobeMounted(true)
-  }, [inMethodology])
+    if (!inOverlay) setGlobeMounted(true)
+  }, [inOverlay])
 
   return (
     <>
       {globeMounted && <App />}
       {inMethodology && <Methodology path={path} />}
+      {inPrivacy && <Privacy />}
     </>
   )
 }

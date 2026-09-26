@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, WHITE } from '../theme'
+import { AMBER, CRIMSON, DIM, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
 // Which sources this component renders, and how to label them.
 const SOURCES = [
@@ -60,7 +60,7 @@ export default function GlobalIndices({ countryCode }) {
 
   return (
     <section>
-      <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: MUTED, marginBottom: 8 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
         GLOBAL FREEDOM INDICES
       </div>
 
@@ -71,15 +71,15 @@ export default function GlobalIndices({ countryCode }) {
           return (
             <div key={key}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
-                <span style={{ fontSize: 11, color: WHITE }}>{label}</span>
-                <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>{row.year}</span>
+                <span style={{ fontSize: TYPE.body, color: WHITE }}>{label}</span>
+                <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{row.year}</span>
               </div>
               <div style={{ height: 6, background: DIM, position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-                <span style={{ fontFamily: MONO, fontSize: 9, color }}>{row.classification}</span>
-                <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>{Math.round(score)}/100 free</span>
+                <span style={{ fontFamily: MONO, fontSize: TYPE.label, color }}>{row.classification}</span>
+                <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{Math.round(score)}/100 free</span>
               </div>
 
               {key === 'V_DEM' && VDEM_SUBSCORES.some((s) => row[s.key] != null) && (
@@ -99,8 +99,8 @@ export default function GlobalIndices({ countryCode }) {
                         style={{ display: 'flex', justifyContent: 'space-between', cursor: 'help' }}
                         title={`${s.label} — ${value}/100 free · ${interval}`}
                       >
-                        <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>{s.label}</span>
-                        <span style={{ fontFamily: MONO, fontSize: 9, color: scoreColor(value) }}>
+                        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{s.label}</span>
+                        <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: scoreColor(value) }}>
                           {Math.round(value)}/100
                         </span>
                       </div>
@@ -113,7 +113,7 @@ export default function GlobalIndices({ countryCode }) {
         })}
       </div>
 
-      <div style={{ fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', marginTop: 6 }}>
+      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 6 }}>
         Normalized so higher = more free · RSF shown is the pre-2022 index
       </div>
     </section>

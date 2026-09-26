@@ -26,16 +26,21 @@ p {
   margin: 0;
 }
 
-/* Globe.jsx sizes its Cesium container with `className="w-full h-full"`, but
-   the project has no Tailwind build. Rather than pull in a whole utility
-   framework for two declarations, they're defined here — without them the
-   container collapses to zero height and the globe renders invisibly. */
-.w-full {
-  width: 100%;
+/* The censorship-index / submarine-cable pair at the bottom of the globe
+   (App.jsx). The Censorship Index strip is fixed-content and nowrap, ~500px
+   wide, so if the country sidebar leaves the globe area narrower than that
+   (a small window), the pair would only clip — hide it until there's room.
+   !important because the element's layout is set inline. */
+@container (max-width: 520px) {
+  .globe-legends {
+    display: none !important;
+  }
 }
 
-.h-full {
-  height: 100%;
+/* Divider between panels stacked in one header-dock column (DockPanels.jsx).
+   Hex mirrors the BORDER token in theme.js. */
+.dock-panel + .dock-panel {
+  border-top: 1px solid #0e243e;
 }
 
 /* Tabular numerals for data readouts (clock, counters, coordinates) so digits

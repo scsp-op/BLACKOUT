@@ -1,5 +1,6 @@
-import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { SOURCES } from '../lib/sources'
+import { REPO_URL } from '../lib/links'
 import { linkProps } from '../lib/router'
 
 // Honest link state: mirrors whether the primary country fetch is in flight,
@@ -21,8 +22,6 @@ function formatAge(dataAge) {
   return days === 1 ? '1 day old' : `${days} days old`
 }
 
-const REPO_URL = 'https://github.com/moumenalaoui/globe'
-
 // The GitHub mark, inlined rather than fetched. A remote icon would be the only
 // external request the app makes, and it would fail behind exactly the kind of
 // network filtering this tool measures. `currentColor` lets it inherit the
@@ -43,7 +42,9 @@ function GithubMark({ size = 11 }) {
   )
 }
 
-export default function StatusBar({ status = 'ok', dataAge = null }) {
+// `narrow` (phone width) drops the sources list and the link indicator, which
+// don't fit; data age, methodology and the byline stay.
+export default function StatusBar({ status = 'ok', dataAge = null, narrow = false }) {
   const link = LINK[status] ?? LINK.ok
   // The backend already decided what counts as stale (HEALTH_MAX_AGE_DAYS);
   // don't duplicate the threshold here, just colour by its verdict.
@@ -56,21 +57,22 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '0 16px',
+        gap: narrow ? 6 : 10,
+        padding: narrow ? '0 12px' : '0 16px',
         background: SIDEBAR,
         borderTop: `1px solid ${BORDER}`,
         fontFamily: MONO,
-        fontSize: 9,
-        letterSpacing: '0.08em',
+        fontSize: TYPE.tick,
+        letterSpacing: '0.05em',
+        whiteSpace: 'nowrap',
       }}
     >
       {/* Inline rather than in App.css because it is the only rule this
           component needs — same pattern the outage feed uses for its pulse. */}
       <style>{`.repo-link:hover { color: ${WHITE} } .source-link:hover { color: ${CYAN} }`}</style>
 
-      <span style={{ color: MUTED }}>SOURCES</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {!narrow && <span style={{ color: MUTED }}>SOURCES</span>}
+      {!narrow && <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {SOURCES.map((source, i) => (
           <span key={source.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {i > 0 && <span style={{ color: BORDER_STRONG }}>·</span>}
@@ -86,13 +88,17 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
             </a>
           </span>
         ))}
-      </span>
+      </span>}
 
-      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: link.color }} />
-        <span style={{ color: link.color }}>{link.label}</span>
-      </span>
-      <span style={{ width: 1, height: 12, background: BORDER }} />
+      {!narrow && (
+        <>
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: link.color }} />
+            <span style={{ color: link.color }}>{link.label}</span>
+          </span>
+          <span style={{ width: 1, height: 12, background: BORDER }} />
+        </>
+      )}
       <span
         style={{ color: MUTED, cursor: dataAge?.newest_data ? 'help' : 'default' }}
         title={
@@ -119,6 +125,14 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
         style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
       >
         METHODOLOGY
+      </a>
+      <span style={{ width: 1, height: 12, background: BORDER }} />
+      <a
+        {...linkProps('/privacy')}
+        className="repo-link"
+        style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
+      >
+        PRIVACY
       </a>
 
       <span style={{ width: 1, height: 12, background: BORDER }} />

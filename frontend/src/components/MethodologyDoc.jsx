@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getMethodologyDoc } from '../lib/api'
 import { splitNumber } from '../lib/toc'
-import { BORDER, BORDER_STRONG, CYAN, DIM, MONO, MUTED, RAISED, SANS, SIDEBAR, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, CYAN, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // Distance from the top of the scroll container at which a heading counts as
 // "the section you are reading". Matching the prose's `scroll-margin-top` keeps
@@ -19,7 +19,7 @@ const NUMBER_GUTTER = 30
 // instrument panel: 17px Inter at a 1.75 line height, in a measure capped near
 // 70 characters. Everything else is derived from theme.js so the documents
 // belong to the same surface as the chrome around them.
-const PROSE_CSS = `
+export const PROSE_CSS = `
 .md-prose {
   font-family: ${SANS};
   font-size: 18px;
@@ -130,6 +130,20 @@ const PROSE_CSS = `
 @media (max-width: 1000px) {
   .md-toc { display: none !important }
 }
+
+/* Phone widths (the app's NARROW breakpoint, lib/useNarrow.js): 18px body
+   text is large on a ~390px screen; 16px is the usual reading size there. */
+@media (max-width: 820px) {
+  .md-prose { font-size: 16px }
+}
+
+/* A document that opens with a short lead-in paragraph and a --- break
+   (the policy methodology) stacked the break's space on top of the first
+   heading's, leaving ~130px of void under two lines of text. Collapse that
+   first break so the lead-in reads as leading into the first section. Later
+   section breaks keep their full spacing. */
+.md-prose > p:first-child + hr { margin: 0 }
+.md-prose > p:first-child + hr + h2 { margin-top: 1.4em }
 `
 
 // Group the flat table of contents into sections and their subsections, so a
@@ -235,7 +249,7 @@ function TocRail({ toc, activeId, onJump }) {
                     width: NUMBER_GUTTER,
                     flexShrink: 0,
                     paddingTop: isSection ? 1.5 : 1,
-                    color: active ? CYAN : DIM,
+                    color: active ? CYAN : MUTED,
                   }}
                 >
                   {number ?? ''}
@@ -271,7 +285,7 @@ function TocRail({ toc, activeId, onJump }) {
                     cursor: 'pointer',
                     fontFamily: MONO,
                     fontSize: 11,
-                    color: open ? MUTED : DIM,
+                    color: open ? WHITE : MUTED,
                   }}
                 >
                   {open ? '\u2212' : '+'}
@@ -463,7 +477,7 @@ export default function MethodologyDoc({ slug }) {
             marginBottom: 36,
           }}
         >
-          <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em', color: WHITE }}>
+          <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.1em', color: WHITE }}>
             {doc.title.toUpperCase()}
           </span>
           <span
@@ -471,7 +485,7 @@ export default function MethodologyDoc({ slug }) {
             style={{
               marginLeft: 'auto',
               fontFamily: MONO,
-              fontSize: 9,
+              fontSize: TYPE.label,
               letterSpacing: '0.08em',
               color: MUTED,
               flexShrink: 0,

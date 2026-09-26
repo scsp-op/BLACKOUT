@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { AMBER, BORDER, CRIMSON, DIM, MONO, MUTED, SIDEBAR, WHITE } from '../theme'
+import { AMBER, BORDER, CRIMSON, DIM, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { BLOCKING_STATUS_COLOR } from '../lib/blockingRegistry'
 import { getGeo } from '../lib/api'
 
@@ -107,7 +107,7 @@ export default function BlockingHeatmap({ rows }) {
         position: 'absolute',
         left: 24,
         top: 16,
-        width: 260,
+        width: 296,
         maxHeight: 'calc(100vh - 120px)',
         display: 'flex',
         flexDirection: 'column',
@@ -129,8 +129,8 @@ export default function BlockingHeatmap({ rows }) {
           marginBottom: collapsed ? 0 : 8,
           cursor: 'pointer',
           fontFamily: MONO,
-          fontSize: 10,
-          letterSpacing: '0.1em',
+          fontSize: TYPE.label,
+          letterSpacing: '0.06em',
           color: MUTED,
         }}
       >
@@ -145,8 +145,8 @@ export default function BlockingHeatmap({ rows }) {
               <div
                 style={{
                   fontFamily: MONO,
-                  fontSize: 9,
-                  letterSpacing: '0.1em',
+                  fontSize: TYPE.label,
+                  letterSpacing: '0.06em',
                   textTransform: 'uppercase',
                   color: MUTED,
                   marginBottom: 4,
@@ -177,14 +177,14 @@ export default function BlockingHeatmap({ rows }) {
                         textAlign: 'left',
                       }}
                     >
-                      <span style={{ fontSize: 10, color: isOpen ? WHITE : '#c8ccd4', width: 90, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: TYPE.body, color: isOpen ? WHITE : '#c8ccd4', width: 108, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {techLabel(t.technology)}
                       </span>
                       <div style={{ flex: 1, height: 7, background: DIM, position: 'relative', display: 'flex' }}>
                         <div style={{ width: `${confW}%`, background: CRIMSON }} />
                         <div style={{ width: `${likeW}%`, background: AMBER }} />
                       </div>
-                      <span style={{ fontFamily: MONO, fontSize: 9, color: t.blocked > 0 ? CRIMSON : MUTED, width: 20, flexShrink: 0, textAlign: 'right' }}>
+                      <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: t.blocked > 0 ? CRIMSON : MUTED, width: 24, flexShrink: 0, textAlign: 'right' }}>
                         {t.blocked}
                       </span>
                     </button>
@@ -204,10 +204,10 @@ export default function BlockingHeatmap({ rows }) {
                         }}
                       >
                         {t.blockers.length === 0 && (
-                          <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>No confirmed or likely blocks.</span>
+                          <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>No confirmed or likely blocks.</span>
                         )}
                         {t.blockers.map((b) => (
-                          <span key={b.code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, color: '#c8ccd4' }}>
+                          <span key={b.code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: TYPE.label, color: '#c8ccd4' }}>
                             <span style={{ width: 5, height: 5, borderRadius: '50%', background: BLOCKING_STATUS_COLOR[b.status] ?? BORDER, flexShrink: 0 }} />
                             {names[b.code] ?? b.code}
                           </span>
@@ -220,7 +220,7 @@ export default function BlockingHeatmap({ rows }) {
             </div>
           ))}
 
-          <div style={{ display: 'flex', gap: 12, fontFamily: MONO, fontSize: 8, color: MUTED, letterSpacing: '0.05em', paddingTop: 2, borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', gap: 12, fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', paddingTop: 2, borderTop: `1px solid ${BORDER}` }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 7, height: 7, background: CRIMSON }} /> confirmed
             </span>
