@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Globe from './components/Globe'
 import CountrySidebar from './components/CountrySidebar'
 import OutageFeed from './components/OutageFeed'
@@ -99,11 +99,15 @@ export default function App() {
   // Satellite tracking layer: live-polled positions, a single-select "space
   // tracking" choice ('none' | 'all' | a category key — see SatelliteLegend's
   // SPACE_TRACKING_OPTIONS), live per-category counts, and the currently-
-  // selected satellite's orbit path. Defaults to 'all' so the layer shows
-  // everything tracked on first load.
+  // selected satellite's orbit path. Defaults to 'none': 17k dots on first
+  // load buried the censorship shading — the actual story — under a satellite
+  // tracker. The layer is one click away in the SATELLITES panel.
   const [satellites, setSatellites] = useState([])
-  const [spaceTrackingSelection, setSpaceTrackingSelection] = useState('all')
+  const [spaceTrackingSelection, setSpaceTrackingSelection] = useState('none')
   const [spaceTrackingCounts, setSpaceTrackingCounts] = useState({})
+  // Read by the satellite effect without making counts one of its deps.
+  const spaceTrackingCountsRef = useRef(spaceTrackingCounts)
+  spaceTrackingCountsRef.current = spaceTrackingCounts
   const [selectedSatelliteId, setSelectedSatelliteId] = useState(null)
   const [satelliteOrbit, setSatelliteOrbit] = useState(null)
   // Freshness of the DATA, not of the last network call. This used to be
@@ -371,7 +375,21 @@ export default function App() {
   useEffect(() => {
     if (spaceTrackingSelection === 'none') {
       setSatellites([])
-      return
+      // Hidden on first load, so no counts have arrived yet: fetch them once.
+      // `total`/`category_counts` are catalog-wide whatever the filter, so the
+      // smallest category (stations, ~70 objects) is the cheapest request
+      // that returns them; its positions are discarded.
+      let cancelled = false
+      if (!spaceTrackingCountsRef.current.total) {
+        getSatellites('stations')
+          .then((data) => {
+            if (!cancelled) setSpaceTrackingCounts({ total: data.total, ...data.category_counts })
+          })
+          .catch(() => {})
+      }
+      return () => {
+        cancelled = true
+      }
     }
 
     const category = spaceTrackingSelection === 'all' ? null : spaceTrackingSelection
