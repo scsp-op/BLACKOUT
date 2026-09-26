@@ -27,6 +27,7 @@ import {
 import { BASE, BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE } from './theme'
 import './App.css'
 import { navigate, useRoute } from './lib/router'
+import { useMediaQuery, useNarrow } from './lib/useNarrow'
 
 // A shareable country link: /country/IR (case-insensitive).
 const COUNTRY_PATH = /^\/country\/([a-z]{2})$/i
@@ -37,6 +38,11 @@ const LEFT_DOCK_WIDTH = 280
 const RIGHT_DOCK_WIDTH = 240
 // Gap between a dock column and the edge of <main> / the globe.
 const DOCK_GAP = 12
+// Phone width: share of the globe area the country sheet covers — from the
+// bottom in portrait, from the right in landscape (where a bottom sheet would
+// leave only a thin strip of map under the two-row header).
+const SHEET_FRACTION = 0.56
+const SIDE_SHEET_FRACTION = 0.55
 
 // How often the client re-fetches satellite positions. The backend computes
 // them fresh on every request (no server-side position cache), so this
@@ -75,13 +81,20 @@ export default function App() {
   // satellites dock on the left, outages on the right) and of the country
   // sidebar; all closed on load so the globe starts uncovered.
   const [openPanels, setOpenPanels] = useState({ ranking: false, outages: false, satellites: false })
+  const narrow = useNarrow()
+  const sideSheet = useMediaQuery('(orientation: landscape)') && narrow
   const leftDockOpen = openPanels.ranking || openPanels.satellites
   // Centre the globe in the gap between whichever dock columns are open:
   // shift it by half the difference of the room each side takes.
   const leftDockExtent = leftDockOpen ? DOCK_GAP + LEFT_DOCK_WIDTH + DOCK_GAP : 0
   const rightDockExtent = openPanels.outages ? DOCK_GAP + RIGHT_DOCK_WIDTH + DOCK_GAP : 0
-  const globeOffsetX = (leftDockExtent - rightDockExtent) / 2
-  const togglePanel = (id) => setOpenPanels((p) => ({ ...p, [id]: !p[id] }))
+  // (On phones the panels open full-width over the globe, so no shift.)
+  const globeOffsetX = narrow ? 0 : (leftDockExtent - rightDockExtent) / 2
+  // On phones one panel at a time — each opens full-width, so two would stack.
+  const togglePanel = (id) =>
+    setOpenPanels((p) =>
+      narrow ? { ranking: false, outages: false, satellites: false, [id]: !p[id] } : { ...p, [id]: !p[id] },
+    )
   const closePanel = (id) => setOpenPanels((p) => ({ ...p, [id]: false }))
   const [selectedCountry, setSelectedCountry] = useState(null)
   const [selectionError, setSelectionError] = useState('')
@@ -522,6 +535,12 @@ export default function App() {
     document.title = name ? `${name} · BLACKOUT` : 'BLACKOUT'
   }, [selectedCode, geoByCode])
 
+  // On phones the country opens as a bottom sheet; a full-width dock panel
+  // left open above it would stack on top, so opening a country closes them.
+  useEffect(() => {
+    if (narrow && selectedCode) setOpenPanels({ ranking: false, outages: false, satellites: false })
+  }, [narrow, selectedCode])
+
   const statusMessage = countriesError || selectionError || globeError
     || (isLoadingCountries && 'Loading country data...')
     || (isLoadingSelection && 'Refreshing country...')
@@ -568,9 +587,11 @@ export default function App() {
         openPanels={openPanels}
         onTogglePanel={togglePanel}
         onCloseAll={() => setOpenPanels({ ranking: false, outages: false, satellites: false })}
+        narrow={narrow}
       />
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      {/* position: relative anchors the phone-width country bottom sheet. */}
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
         {/* A size container so .globe-legends (index.css) can step aside
             when the country sidebar squeezes the globe area too narrow for it. */}
         <main style={{ position: 'relative', flex: 1, overflow: 'hidden', containerType: 'inline-size' }}>
@@ -590,6 +611,9 @@ export default function App() {
             cables={cables}
             showCables={showCables}
             offsetX={globeOffsetX}
+            // Phone width: keep the selected country in view above the sheet.
+            coverBottom={narrow && !sideSheet && selectedCode ? SHEET_FRACTION : 0}
+            coverRight={sideSheet && selectedCode ? SIDE_SHEET_FRACTION : 0}
           />
 
           {/* Vignette: darkens the globe-area corners to focus the eye and add
@@ -614,7 +638,9 @@ export default function App() {
               stacks the pair upward when <main> gets too narrow for both,
               and below the width of one it hides (see .globe-legends). */}
           <div
-            className="globe-legends"
+            // Desktop only: the phone layout uses the compact legends, which
+            // fit, so the narrow-container hide rule mustn't apply to them.
+            className={narrow ? undefined : 'globe-legends'}
             style={{
               position: 'absolute',
               bottom: 12,
@@ -622,7 +648,8 @@ export default function App() {
               // fits on one row when the country sidebar leaves <main> 880px
               // wide at a 1280 window, instead of wrapping Cables upward.
               left: 8,
-              right: 8,
+              // Landscape phone: stay within the map area left of the side sheet.
+              right: sideSheet && selectedCode ? `calc(${SIDE_SHEET_FRACTION * 100}% + 8px)` : 8,
               display: 'flex',
               flexWrap: 'wrap-reverse',
               justifyContent: 'center',
@@ -632,7 +659,7 @@ export default function App() {
             }}
           >
             <div style={{ pointerEvents: 'auto' }}>
-              <IndexLegend show={showIndex} onToggle={() => setShowIndex((v) => !v)} />
+              <IndexLegend show={showIndex} onToggle={() => setShowIndex((v) => !v)} compact={narrow} />
             </div>
             <div style={{ pointerEvents: 'auto' }}>
               <CableLegend
@@ -640,6 +667,7 @@ export default function App() {
                 onToggle={() => setShowCables((v) => !v)}
                 routeCount={cables.routes.length}
                 landingCount={cables.landing_points.length}
+                compact={narrow}
               />
             </div>
           </div>
@@ -647,7 +675,7 @@ export default function App() {
           {/* Dock panels: floating columns at the globe's left and right
               edges, like the panels before the dock (see DockColumn). */}
           {leftDockOpen && (
-            <DockColumn side="left" width={LEFT_DOCK_WIDTH}>
+            <DockColumn side="left" width={LEFT_DOCK_WIDTH} narrow={narrow}>
               {openPanels.satellites && (
                 <DockPanel title="SPACE TRACKING" onClose={() => closePanel('satellites')}>
                   <SatelliteLegend
@@ -667,7 +695,7 @@ export default function App() {
           {openPanels.outages && (
             // The least essential panel, so the narrowest, and capped at ~12
             // rows before it scrolls rather than running the full height.
-            <DockColumn side="right" width={RIGHT_DOCK_WIDTH} cap={360}>
+            <DockColumn side="right" width={RIGHT_DOCK_WIDTH} cap={360} narrow={narrow}>
               <DockPanel
                 title="INTERNET OUTAGES"
                 accessory={
@@ -688,7 +716,7 @@ export default function App() {
             periodMinutes={satelliteOrbit?.period_minutes}
             onClose={() => setSelectedSatelliteId(null)}
             // Beside the left dock column when it's open, not under it.
-            left={leftDockOpen ? leftDockExtent : DOCK_GAP}
+            left={leftDockOpen && !narrow ? leftDockExtent : DOCK_GAP}
           />
 
           {statusMessage && (
@@ -717,13 +745,46 @@ export default function App() {
             refetched country-independent data like /api/models on every
             selection. */}
         {selectedCode && (
-          <aside style={{ width: 360, flexShrink: 0, height: '100%', overflow: 'hidden' }}>
+          <aside
+            style={
+              sideSheet
+                ? {
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: `${SIDE_SHEET_FRACTION * 100}%`,
+                    overflow: 'hidden',
+                    zIndex: 15,
+                    borderLeft: `1px solid ${BORDER}`,
+                    boxShadow: '-8px 0 24px rgba(0, 0, 0, 0.45)',
+                  }
+                : narrow
+                ? {
+                    // Phone width: a bottom sheet over the lower part of the
+                    // globe (which shifts up to stay in view — see Globe's
+                    // coverBottom), instead of a column that would fill the
+                    // screen.
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: `${SHEET_FRACTION * 100}%`,
+                    overflow: 'hidden',
+                    zIndex: 15,
+                    borderTop: `1px solid ${BORDER}`,
+                    boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.45)',
+                  }
+                : { width: 360, flexShrink: 0, height: '100%', overflow: 'hidden' }
+            }
+          >
             {sidebarCountry ? (
               <CountrySidebar
                 country={sidebarCountry}
                 layer={layer}
                 starlinkStatus={starlinkByCode[sidebarCountry?.country_code]}
                 ixpStats={ixpByCode[sidebarCountry?.country_code]}
+                fill={narrow}
                 onClose={() => {
                   setSelectedCode('')
                   setSelectedCountry(null)
@@ -752,7 +813,7 @@ export default function App() {
         )}
       </div>
 
-      <StatusBar status={linkStatus} dataAge={dataAge} />
+      <StatusBar status={linkStatus} dataAge={dataAge} narrow={narrow} />
     </div>
   )
 }

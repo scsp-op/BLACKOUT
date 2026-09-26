@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BLACK, BORDER, BORDER_STRONG, CRIMSON, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 import ScspLogo from './ScspLogo'
+import { COMPACT_HEADER_QUERY, useMediaQuery } from '../lib/useNarrow'
 
 const Divider = () => <span style={{ width: 1, height: 22, background: BORDER, flexShrink: 0 }} />
 
@@ -11,7 +12,7 @@ const fold = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toL
 // broke the dark UI, and scrolling ~235 entries to find one was slow. Type to
 // filter by name or ISO code; ↑/↓ + Enter or click to pick; Escape or a click
 // outside closes. Shows the selected country's name when not being edited.
-function CountryPicker({ value, options, onChange }) {
+function CountryPicker({ value, options, onChange, fluid = false }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -80,7 +81,7 @@ function CountryPicker({ value, options, onChange }) {
   }
 
   return (
-    <div ref={rootRef} style={{ position: 'relative' }}>
+    <div ref={rootRef} style={{ position: 'relative', ...(fluid ? { flex: 1, minWidth: 0 } : null) }}>
       <input
         type="text"
         role="combobox"
@@ -104,7 +105,7 @@ function CountryPicker({ value, options, onChange }) {
         onKeyDown={onKeyDown}
         style={{
           height: 30,
-          width: 200,
+          width: fluid ? '100%' : 200,
           background: BLACK,
           border: `1px solid ${open ? BORDER_STRONG : BORDER}`,
           borderRadius: 0,
@@ -125,7 +126,7 @@ function CountryPicker({ value, options, onChange }) {
             position: 'absolute',
             top: 'calc(100% + 4px)',
             left: 0,
-            width: 240,
+            width: fluid ? '100%' : 240,
             maxHeight: 320,
             overflowY: 'auto',
             background: SIDEBAR,
@@ -188,7 +189,7 @@ function Stat({ label, value, title }) {
 
 // One dock button. The highlighted border is what ties it to the panel it
 // opened at the globe's edge (App's DockColumn / DockPanel).
-function DockItem({ id, label, badge, badgeColor, pulse, open, onToggle }) {
+function DockItem({ id, label, badge, badgeColor, pulse, open, onToggle, stretch = false }) {
   return (
     <button
       type="button"
@@ -198,7 +199,10 @@ function DockItem({ id, label, badge, badgeColor, pulse, open, onToggle }) {
         height: 30,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 7,
+        // On phones the three buttons share the row equally.
+        flex: stretch ? 1 : 'none',
         background: open ? RAISED : 'transparent',
         border: `1px solid ${open ? HIGHLIGHT : BORDER}`,
         color: open ? HIGHLIGHT : WHITE,
@@ -234,8 +238,11 @@ function DockItem({ id, label, badge, badgeColor, pulse, open, onToggle }) {
 // as before (ranking and satellites on the left, outages on the right), any
 // combination can be open at once, and nothing is open on load so the globe
 // starts clean.
-export default function CommandBar({ countries, selectedCode, onSelectCountry, counts, openPanels, onTogglePanel, onCloseAll }) {
+export default function CommandBar({ countries, selectedCode, onSelectCountry, counts, openPanels, onTogglePanel, onCloseAll, narrow = false }) {
   const anyOpen = Object.values(openPanels).some(Boolean)
+  // Tablet widths: the full desktop row needs ~1100px, so drop the counters
+  // and show the SCSP emblem instead of the full lockup.
+  const compactHeader = useMediaQuery(COMPACT_HEADER_QUERY)
 
   // Escape closes every open panel. No click-outside close: the panels sit at
   // the globe's edges, so the globe stays usable with them open.
@@ -245,6 +252,53 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [anyOpen, onCloseAll])
+
+  const options = countries.map((c) => ({ value: c.country_code, label: c.country_name }))
+  const dock = (
+    <>
+      <DockItem id="ranking" label="RANKING" open={openPanels.ranking} onToggle={onTogglePanel} stretch={narrow} />
+      <DockItem
+        id="outages"
+        label="OUTAGES"
+        badge={counts.outages}
+        badgeColor={counts.outages > 0 ? CRIMSON : MUTED}
+        pulse={counts.outages > 0}
+        open={openPanels.outages}
+        onToggle={onTogglePanel}
+        stretch={narrow}
+      />
+      <DockItem id="satellites" label="SATELLITES" open={openPanels.satellites} onToggle={onTogglePanel} stretch={narrow} />
+    </>
+  )
+
+  // Phone width: two rows — wordmark, search and the SCSP emblem, then the
+  // dock buttons sharing the full width. The tagline, the counters and the
+  // full SCSP lockup don't fit and are dropped.
+  if (narrow) {
+    return (
+      <header
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          padding: '8px 12px',
+          background: SIDEBAR,
+          borderBottom: `1px solid ${BORDER}`,
+        }}
+      >
+        <style>{`@keyframes outagePulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }`}</style>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: TYPE.title, letterSpacing: '0.08em', color: WHITE, flexShrink: 0 }}>
+            BLACKOUT
+          </span>
+          <CountryPicker value={selectedCode} options={options} onChange={onSelectCountry} fluid />
+          <ScspLogo height={24} color={WHITE} markOnly />
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>{dock}</div>
+      </header>
+    )
+  }
 
   return (
     <header
@@ -275,47 +329,35 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
       <Divider />
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <CountryPicker
-          value={selectedCode}
-          options={countries.map((c) => ({ value: c.country_code, label: c.country_name }))}
-          onChange={onSelectCountry}
-        />
+        <CountryPicker value={selectedCode} options={options} onChange={onSelectCountry} />
       </div>
 
       <Divider />
 
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <DockItem id="ranking" label="RANKING" open={openPanels.ranking} onToggle={onTogglePanel} />
-        <DockItem
-          id="outages"
-          label="OUTAGES"
-          badge={counts.outages}
-          badgeColor={counts.outages > 0 ? CRIMSON : MUTED}
-          pulse={counts.outages > 0}
-          open={openPanels.outages}
-          onToggle={onTogglePanel}
-        />
-        <DockItem id="satellites" label="SATELLITES" open={openPanels.satellites} onToggle={onTogglePanel} />
-      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>{dock}</div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Stat
-          label="COUNTRIES & TERRITORIES"
-          value={counts.countries}
-          title="Countries and territories on the map"
-        />
-        <Stat
-          label="COUNTRIES BLOCKING"
-          value={counts.blockingCountries}
-          title="Countries where OONI measurements confirm at least one tracked messaging app, AI service or circumvention tool is blocked"
-        />
+        {!compactHeader && (
+          <>
+            <Stat
+              label="COUNTRIES & TERRITORIES"
+              value={counts.countries}
+              title="Countries and territories on the map"
+            />
+            <Stat
+              label="COUNTRIES BLOCKING"
+              value={counts.blockingCountries}
+              title="Countries where OONI measurements confirm at least one tracked messaging app, AI service or circumvention tool is blocked"
+            />
+          </>
+        )}
 
         {/* Reversed SCSP lockup closes the bar. Same Divider as the wordmark
             side, so the header reads as one rule of instrument groups rather
             than a logo bolted on. WHITE rather than pure #fff: the mark sits
             at the same tone as the rest of the chrome text. */}
         <Divider />
-        <ScspLogo height={26} color={WHITE} />
+        <ScspLogo height={26} color={WHITE} markOnly={compactHeader} />
       </div>
     </header>
   )

@@ -8,15 +8,15 @@ import { BORDER, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 // legend row (12 top + 12 bottom + ~36 row + 12 gap = 72) so it never covers
 // it; `cap` tightens it further for a panel that shouldn't run the full height.
 // Panels in the same column stack vertically.
-export function DockColumn({ side, width, cap, children }) {
+export function DockColumn({ side, width, cap, narrow = false, children }) {
   const clearLegends = 'calc(100% - 72px)'
   return (
     <aside
       style={{
         position: 'absolute',
-        top: 12,
-        [side]: 12,
-        width,
+        top: narrow ? 8 : 12,
+        // Phone width: full-width (one panel at a time — see App).
+        ...(narrow ? { left: 8, right: 8 } : { [side]: 12, width }),
         maxHeight: cap ? `min(${clearLegends}, ${cap}px)` : clearLegends,
         display: 'flex',
         flexDirection: 'column',

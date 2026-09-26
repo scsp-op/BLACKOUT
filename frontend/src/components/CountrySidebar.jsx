@@ -178,7 +178,7 @@ function BlockingTechRow({ tech, row, countryCode, timelineRows }) {
   )
 }
 
-export default function CountrySidebar({ country, layer, starlinkStatus, ixpStats, onClose }) {
+export default function CountrySidebar({ country, layer, starlinkStatus, ixpStats, onClose, fill = false }) {
   const [blockingRows, setBlockingRows] = useState([])
   const [blockingLoading, setBlockingLoading] = useState(true)
   const [timelineByTech, setTimelineByTech] = useState({})
@@ -260,12 +260,13 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
   return (
     <div
       style={{
-        width: 360,
-        minWidth: 360,
+        // `fill`: the phone bottom sheet, which sets its own width.
+        width: fill ? '100%' : 360,
+        minWidth: fill ? 0 : 360,
         height: '100%',
         overflowY: 'auto',
         background: SIDEBAR,
-        borderLeft: `1px solid ${BORDER}`,
+        borderLeft: fill ? 'none' : `1px solid ${BORDER}`,
       }}
     >
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}` }}>

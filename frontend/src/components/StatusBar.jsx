@@ -43,7 +43,9 @@ function GithubMark({ size = 11 }) {
   )
 }
 
-export default function StatusBar({ status = 'ok', dataAge = null }) {
+// `narrow` (phone width) drops the sources list and the link indicator, which
+// don't fit; data age, methodology and the byline stay.
+export default function StatusBar({ status = 'ok', dataAge = null, narrow = false }) {
   const link = LINK[status] ?? LINK.ok
   // The backend already decided what counts as stale (HEALTH_MAX_AGE_DAYS);
   // don't duplicate the threshold here, just colour by its verdict.
@@ -56,8 +58,8 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '0 16px',
+        gap: narrow ? 6 : 10,
+        padding: narrow ? '0 12px' : '0 16px',
         background: SIDEBAR,
         borderTop: `1px solid ${BORDER}`,
         fontFamily: MONO,
@@ -70,8 +72,8 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
           component needs — same pattern the outage feed uses for its pulse. */}
       <style>{`.repo-link:hover { color: ${WHITE} } .source-link:hover { color: ${CYAN} }`}</style>
 
-      <span style={{ color: MUTED }}>SOURCES</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {!narrow && <span style={{ color: MUTED }}>SOURCES</span>}
+      {!narrow && <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {SOURCES.map((source, i) => (
           <span key={source.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {i > 0 && <span style={{ color: BORDER_STRONG }}>·</span>}
@@ -87,13 +89,17 @@ export default function StatusBar({ status = 'ok', dataAge = null }) {
             </a>
           </span>
         ))}
-      </span>
+      </span>}
 
-      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: link.color }} />
-        <span style={{ color: link.color }}>{link.label}</span>
-      </span>
-      <span style={{ width: 1, height: 12, background: BORDER }} />
+      {!narrow && (
+        <>
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: link.color }} />
+            <span style={{ color: link.color }}>{link.label}</span>
+          </span>
+          <span style={{ width: 1, height: 12, background: BORDER }} />
+        </>
+      )}
       <span
         style={{ color: MUTED, cursor: dataAge?.newest_data ? 'help' : 'default' }}
         title={

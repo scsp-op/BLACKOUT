@@ -215,6 +215,13 @@ export default function Globe({
   // host (<main>): App passes half the difference between the floating dock
   // columns on each side, so the globe centres in the gap between them.
   offsetX = 0,
+  // Share (0–1) of the host's height covered from the bottom — the phone
+  // layout's country bottom sheet. The globe's centre moves up into the middle
+  // of what's left visible, the vertical counterpart of `offsetX`.
+  coverBottom = 0,
+  // Same, from the right (the country sheet on a phone held in landscape).
+  // Takes precedence over `offsetX`, which is the desktop dock-column shift.
+  coverRight = 0,
 }) {
   const containerRef = useRef(null)
   const viewerRef = useRef(null)
@@ -330,24 +337,29 @@ export default function Globe({
       viewer.scene.sun.show  = false
       viewer.scene.moon.show = false
 
-      // Keep the globe's on-screen size independent of the container's
-      // width. The container is widened past <main> to shift the globe's
-      // centre (see `offsetX` in the returned element), and Cesium applies
-      // `frustum.fov` to the wider axis — so a wider canvas would shrink the
-      // globe. Each frame, pin the vertical FOV to what it would be if the
-      // canvas were exactly <main>'s width, and widen the horizontal FOV to
-      // match. Done per frame so window resizes and the width transition are
-      // tracked without extra plumbing; it's a no-op when nothing changed.
+      // Keep the globe's on-screen size independent of the container's size.
+      // The container is enlarged past <main> to shift the globe's centre (see
+      // `offsetX` / `coverBottom` in the returned element), and Cesium derives
+      // the projection from the canvas — so a larger canvas would shrink the
+      // globe. Each frame, set the FOV so the projection's pixels-per-radian
+      // match what an exactly <main>-sized canvas would give: the vertical FOV
+      // scales with the extra height, and the horizontal one follows the
+      // canvas aspect. Per frame, so window resizes and the size transition
+      // are tracked without extra plumbing; a no-op when nothing changed.
       viewer.scene.preRender.addEventListener(() => {
         const container = containerRef.current
         const host = container?.parentElement
-        const height = container?.clientHeight
-        if (!host || !height || !container.clientWidth) return
-        const hostAspect = host.clientWidth / height
-        const canvasAspect = container.clientWidth / height
-        const fovy = hostAspect <= 1
+        if (!host || !host.clientHeight || !container.clientHeight || !container.clientWidth) return
+        const hostAspect = host.clientWidth / host.clientHeight
+        const canvasAspect = container.clientWidth / container.clientHeight
+        // Vertical FOV an exactly host-sized canvas would have (Cesium applies
+        // BASE_FOV to the wider axis)…
+        const hostFovy = hostAspect <= 1
           ? BASE_FOV
           : 2 * Math.atan(Math.tan(BASE_FOV / 2) / hostAspect)
+        // …stretched to the taller canvas at the same pixel scale…
+        const fovy = 2 * Math.atan(Math.tan(hostFovy / 2) * (container.clientHeight / host.clientHeight))
+        // …and expressed as Cesium's `fov`, which is horizontal when wide.
         const fov = canvasAspect <= 1
           ? fovy
           : 2 * Math.atan(Math.tan(fovy / 2) * canvasAspect)
@@ -971,11 +983,13 @@ export default function Globe({
       ref={containerRef}
       style={{
         position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: Math.min(0, 2 * offsetX),
-        width: `calc(100% + ${2 * Math.abs(offsetX)}px)`,
-        transition: 'left 200ms ease, width 200ms ease',
+        // Vertically the same trick: extending the top by the covered share
+        // puts the centre in the middle of the uncovered part.
+        top: `${-coverBottom * 100}%`,
+        height: `${100 + coverBottom * 100}%`,
+        left: coverRight ? `${-coverRight * 100}%` : Math.min(0, 2 * offsetX),
+        width: coverRight ? `${100 + coverRight * 100}%` : `calc(100% + ${2 * Math.abs(offsetX)}px)`,
+        transition: 'left 200ms ease, width 200ms ease, top 200ms ease, height 200ms ease',
       }}
     />
   )

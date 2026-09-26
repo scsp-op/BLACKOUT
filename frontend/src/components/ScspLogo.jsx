@@ -10,12 +10,14 @@
 // site with no extra request.
 //
 // Lockup aspect is 6.38:1 — set `height` and let width follow, never both.
-export default function ScspLogo({ height = 26, color, title = 'Special Competitive Studies Project' }) {
+// `markOnly` crops the same artwork to just the emblem (x 155–220 of the
+// artboard) for phone widths, where the full lockup doesn't fit.
+export default function ScspLogo({ height = 26, color, title = 'Special Competitive Studies Project', markOnly = false }) {
   return (
     <svg
-      viewBox="155.1 255.8 529.9 83.0"
+      viewBox={markOnly ? '155.1 255.8 65.0 83.0' : '155.1 255.8 529.9 83.0'}
       height={height}
-      width={height * 6.3843}
+      width={height * (markOnly ? 65.0 / 83.0 : 6.3843)}
       role="img"
       aria-label={title}
       style={{ display: 'block', color, flexShrink: 0 }}
