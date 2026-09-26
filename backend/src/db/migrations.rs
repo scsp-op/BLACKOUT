@@ -16,6 +16,9 @@
 //! Adding a column is a two-line change: add it to the `CREATE TABLE` in
 //! `schema.rs` so fresh databases get it, and add it to `COLUMNS` below so
 //! existing ones do too. Both are required — they serve different databases.
+//!
+//! It also carries one kind of data fix: renamed display labels that were
+//! stored at fetch time (`CATEGORY_RELABELS`).
 
 use anyhow::{Context, Result};
 use rusqlite::Connection;
@@ -55,6 +58,15 @@ const COLUMNS: &[(&str, &str, &str)] = &[
     ("country_scores", "score_pulse_market_readiness", "REAL"),
 ];
 
+/// Citizen Lab content-category labels renamed after rows were already stored.
+/// `category_blocks.category_label` is written at fetch time from
+/// `fetchers::ooni::category_label`, so a rename there only reaches rows the
+/// next OONI fetch rewrites; this rewrites the rest on boot. (code, new label)
+/// — keep in step with that function. Entries stay permanently, like COLUMNS.
+const CATEGORY_RELABELS: &[(&str, &str)] = &[
+    ("PORN", "Adult Content"),
+];
+
 /// Brings an existing database up to the current schema. Idempotent: safe to
 /// run on every boot, and a no-op on a database `create_tables` just built.
 pub fn run(conn: &Connection) -> Result<()> {
@@ -66,6 +78,23 @@ pub fn run(conn: &Connection) -> Result<()> {
     }
     if added > 0 {
         println!("migrations: added {added} column(s) to existing tables.");
+    }
+
+    // Matches nothing once applied, so this is a no-op on every later boot.
+    let mut relabelled = 0;
+    if table_exists(conn, "category_blocks")? {
+        for (code, label) in CATEGORY_RELABELS {
+            relabelled += conn
+                .execute(
+                    "UPDATE category_blocks SET category_label = ?2
+                     WHERE category_code = ?1 AND category_label <> ?2",
+                    rusqlite::params![code, label],
+                )
+                .with_context(|| format!("failed to relabel category `{code}`"))?;
+        }
+    }
+    if relabelled > 0 {
+        println!("migrations: relabelled {relabelled} category row(s).");
     }
     Ok(())
 }
