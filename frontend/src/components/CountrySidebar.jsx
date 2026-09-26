@@ -17,7 +17,7 @@ import {
   GROUP_LABELS,
   hasTimeline,
 } from '../lib/blockingRegistry'
-import { BORDER, BORDER_STRONG, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, MONO, MUTED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const ALL_TECHNOLOGIES = Object.values(BLOCKING_REGISTRY).flat()
 
@@ -45,7 +45,10 @@ function ThemeSection({ title, first, children }) {
         borderTop: first ? 'none' : `1px solid ${BORDER_STRONG}`,
       }}
     >
-      <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.08em', color: WHITE }}>{title}</div>
+      {/* Inter semibold, sentence case: the one level that isn't mono caps,
+          so a section title reads as a heading rather than as another of the
+          per-widget labels beneath it (which differed only by colour). */}
+      <div style={{ fontFamily: SANS, fontSize: TYPE.title, fontWeight: 600, color: WHITE }}>{title}</div>
       {children}
     </section>
   )
@@ -268,7 +271,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <h2 style={{ fontSize: TYPE.title, fontWeight: 500, color: WHITE }}>{country.country_name}</h2>
+            <h2 style={{ fontSize: TYPE.display, fontWeight: 600, color: WHITE }}>{country.country_name}</h2>
             <span style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.05em', color: MUTED }}>
               {country.country_code}
             </span>
@@ -283,20 +286,21 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
       </div>
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-        <ThemeSection title="NETWORK & PROTOCOL" first>
-          <OutageTimeline countryCode={country.country_code} />
+        {/* Ordered for a policy reader: the headline freedom scores first,
+            then what's blocked (messaging, AI, content, circumvention tools),
+            and the technical network measurements last. */}
+        <ThemeSection title="Freedom & resilience" first>
+          <GlobalIndices countryCode={country.country_code} />
 
-          <Http3ShareChart countryCode={country.country_code} />
+          <ResilienceIndex countryCode={country.country_code} />
+        </ThemeSection>
 
-          <BgpVisibilityChart countryCode={country.country_code} />
-
-          <IxpBadge entry={ixpStats} />
-
-          <StarlinkBadge entry={starlinkStatus} />
+        <ThemeSection title="Messaging">
+          <MessagingStatus countryCode={country.country_code} />
         </ThemeSection>
 
         {showAiAccess && (
-          <ThemeSection title="AI ACCESS">
+          <ThemeSection title="AI access">
             <div>
               <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
                 BLOCKING STATUS
@@ -316,15 +320,11 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
           </ThemeSection>
         )}
 
-        <ThemeSection title="CENSORSHIP">
+        <ThemeSection title="Censorship">
           <CategoryBreakdown countryCode={country.country_code} />
         </ThemeSection>
 
-        <ThemeSection title="MESSAGING">
-          <MessagingStatus countryCode={country.country_code} />
-        </ThemeSection>
-
-        <ThemeSection title="CIRCUMVENTION">
+        <ThemeSection title="Circumvention">
           {showCircumvention && (
             <div>
               <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
@@ -353,10 +353,16 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
           <TorChart countryCode={country.country_code} />
         </ThemeSection>
 
-        <ThemeSection title="RESILIENCE & FREEDOM INDICES">
-          <ResilienceIndex countryCode={country.country_code} />
+        <ThemeSection title="Network & protocol">
+          <OutageTimeline countryCode={country.country_code} />
 
-          <GlobalIndices countryCode={country.country_code} />
+          <Http3ShareChart countryCode={country.country_code} />
+
+          <BgpVisibilityChart countryCode={country.country_code} />
+
+          <IxpBadge entry={ixpStats} />
+
+          <StarlinkBadge entry={starlinkStatus} />
         </ThemeSection>
       </div>
     </div>
