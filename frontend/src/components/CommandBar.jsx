@@ -38,9 +38,9 @@ function CountrySelect({ value, options, onChange }) {
 
 // A single labelled counter. (The outage count lives on the OUTAGES dock
 // button instead, crimson when non-zero.)
-function Stat({ label, value }) {
+function Stat({ label, value, title }) {
   return (
-    <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+    <span title={title} style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, cursor: title ? 'help' : 'default' }}>
       <span style={{ fontFamily: MONO, fontSize: TYPE.tick, letterSpacing: '0.08em', color: MUTED }}>{label}</span>
       <span
         className="tabular"
@@ -165,8 +165,16 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Stat label="COUNTRIES" value={counts.countries} />
-        <Stat label="SIGNALS" value={counts.signals} />
+        <Stat
+          label="COUNTRIES & TERRITORIES"
+          value={counts.countries}
+          title="Countries and territories on the map"
+        />
+        <Stat
+          label="COUNTRIES BLOCKING"
+          value={counts.blockingCountries}
+          title="Countries where OONI measurements confirm at least one tracked messaging app, AI service or circumvention tool is blocked"
+        />
 
         {/* Reversed SCSP lockup closes the bar. Same Divider as the wordmark
             side, so the header reads as one rule of instrument groups rather

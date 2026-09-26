@@ -500,7 +500,10 @@ export default function App() {
     // The globe/dropdown cover every drawable country, so the counter reflects
     // that (geo), not the small researched-dossier set (`countries`).
     countries: geo.length,
-    signals: blocking?.length ?? 0,
+    // Countries where OONI confirms at least one tracked app or tool blocked
+    // (worst status across messaging, AI access, circumvention, privacy) —
+    // a headline a reader can use, unlike the raw count of blocking rows.
+    blockingCountries: Object.values(blockingByCode).filter((e) => e.ALL === 'CONFIRMED_BLOCKED').length,
     outages: outages.length,
   }
 
