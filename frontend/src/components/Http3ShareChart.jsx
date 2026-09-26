@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { BORDER, CYAN, DIM, MONO, MUTED, TYPE, US_EXPOSURE } from '../theme'
+import { BORDER, CYAN, DIM, MONO, MUTED, TYPE, US_EXPOSURE, WHITE } from '../theme'
 import { CURSOR_ONLY, ChartTitle, Readout, useChartHover } from './chartHover'
 
 // Same thinning approach as TorChart.jsx: one tick per month, capped so
@@ -36,6 +36,17 @@ function monthlyTicks(rows) {
   }
   return ticks
 }
+
+// Legend order matches the stack, bottom to top.
+const PROTOCOLS = [
+  { key: 'http3', label: 'HTTP/3', color: CYAN },
+  { key: 'http2', label: 'HTTP/2', color: US_EXPOSURE },
+  { key: 'http1', label: 'HTTP/1.x', color: DIM },
+]
+
+// Two decimals under 1% (HTTP/3 where it's blocked sits at a few hundredths),
+// one otherwise.
+const formatShare = (pct) => `${pct.toFixed(pct < 1 ? 2 : 1)}%`
 
 // HTTP/1.x vs HTTP/2 vs HTTP/3 (QUIC) daily traffic share for a country, from
 // Cloudflare Radar. A leading indicator distinct from an outage: a government
@@ -84,7 +95,7 @@ export default function Http3ShareChart({ countryCode }) {
 
   return (
     <section>
-      <ChartTitle readout={hovered && <Readout value={`${hovered.http3.toFixed(2)}%`} detail={hovered.date} />}>
+      <ChartTitle readout={hovered && <Readout value={hovered.date} />}>
         HTTP/3 (QUIC) TRAFFIC SHARE
       </ChartTitle>
       <div style={{ width: '100%', height: 140 }}>
@@ -154,19 +165,21 @@ export default function Http3ShareChart({ countryCode }) {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: TYPE.label }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: CYAN, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>HTTP/3 (QUIC)</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: US_EXPOSURE, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>HTTP/2</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: DIM, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>HTTP/1.x</span>
-        </div>
+      {/* The legend doubles as the hover readout: each protocol's share for
+          the hovered day sits beside its swatch, so the three read against
+          each other rather than HTTP/3 alone. (The date is on the title line.) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: 14, rowGap: 2, marginTop: 4, fontFamily: MONO, fontSize: TYPE.label }}>
+        {PROTOCOLS.map((p) => (
+          <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 8, height: 8, background: p.color, flexShrink: 0 }} />
+            <span style={{ color: MUTED }}>{p.label}</span>
+            {hovered && (
+              <span className="tabular" style={{ color: WHITE }}>
+                {formatShare(hovered[p.key])}
+              </span>
+            )}
+          </div>
+        ))}
       </div>
 
       <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 4 }}>
