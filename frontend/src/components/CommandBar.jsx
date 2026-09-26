@@ -1,38 +1,172 @@
-import { useEffect } from 'react'
-import { BLACK, BORDER, CRIMSON, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
+import { useEffect, useRef, useState } from 'react'
+import { BLACK, BORDER, BORDER_STRONG, CRIMSON, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 import ScspLogo from './ScspLogo'
 
 const Divider = () => <span style={{ width: 1, height: 22, background: BORDER, flexShrink: 0 }} />
 
-function CountrySelect({ value, options, onChange }) {
+// Accent- and case-insensitive key, so "cote" finds "Côte d'Ivoire".
+const fold = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+// Searchable country picker. Replaces a native <select>: its OS-styled list
+// broke the dark UI, and scrolling ~235 entries to find one was slow. Type to
+// filter by name or ISO code; ↑/↓ + Enter or click to pick; Escape or a click
+// outside closes. Shows the selected country's name when not being edited.
+function CountryPicker({ value, options, onChange }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const rootRef = useRef(null)
+  const listRef = useRef(null)
+
+  const selected = options.find((o) => o.value === value)
+  const q = fold(query.trim())
+  // Ranked: exact ISO code, then names starting with the query, then names
+  // containing it — so "de" puts Germany ahead of Bangladesh.
+  const matches = q
+    ? options
+        .map((o) => {
+          const name = fold(o.label)
+          const rank = o.value.toLowerCase() === q ? 0 : name.startsWith(q) ? 1 : name.includes(q) ? 2 : -1
+          return { o, rank }
+        })
+        .filter((m) => m.rank >= 0)
+        .sort((a, b) => a.rank - b.rank)
+        .map((m) => m.o)
+    : options
+
+  // Close on a press anywhere outside the picker. `pointerdown`, not
+  // `mousedown`: Cesium suppresses the compatibility mouse events on its
+  // canvas, so a click on the globe never produced a mousedown.
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) {
+        setOpen(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [open])
+
+  // Keep the keyboard-highlighted row in view.
+  useEffect(() => {
+    listRef.current?.children[active]?.scrollIntoView({ block: 'nearest' })
+  }, [active, open])
+
+  const pick = (option) => {
+    onChange(option.value)
+    setQuery('')
+    setOpen(false)
+  }
+
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setOpen(true)
+      setActive((i) => Math.min(i + 1, matches.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      if (open && matches[active]) pick(matches[active])
+    } else if (e.key === 'Escape') {
+      // Handled here only: don't also close the dock panels.
+      e.stopPropagation()
+      setQuery('')
+      setOpen(false)
+      e.currentTarget.blur()
+    }
+  }
+
   return (
-    <select
-      aria-label="Country"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      style={{
-        height: 30,
-        background: BLACK,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 0,
-        color: WHITE,
-        fontFamily: MONO,
-        fontSize: TYPE.label,
-        letterSpacing: '0.05em',
-        padding: '0 8px',
-        outline: 'none',
-        minWidth: 170,
-      }}
-    >
-      <option value="" disabled style={{ background: BLACK, color: MUTED }}>
-        Select country
-      </option>
-      {options.map((option) => (
-        <option key={option.value} value={option.value} style={{ background: BLACK, color: WHITE }}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <div ref={rootRef} style={{ position: 'relative' }}>
+      <input
+        type="text"
+        role="combobox"
+        aria-label="Country"
+        aria-expanded={open}
+        aria-controls="country-picker-list"
+        spellCheck={false}
+        autoComplete="off"
+        placeholder={selected ? selected.label : 'Search country'}
+        value={open ? query : (selected?.label ?? '')}
+        onFocus={() => {
+          setOpen(true)
+          setQuery('')
+          setActive(0)
+        }}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          setActive(0)
+          setOpen(true)
+        }}
+        onKeyDown={onKeyDown}
+        style={{
+          height: 30,
+          width: 200,
+          background: BLACK,
+          border: `1px solid ${open ? BORDER_STRONG : BORDER}`,
+          borderRadius: 0,
+          color: WHITE,
+          fontFamily: MONO,
+          fontSize: TYPE.label,
+          letterSpacing: '0.05em',
+          padding: '0 8px',
+          outline: 'none',
+        }}
+      />
+      {open && (
+        <div
+          id="country-picker-list"
+          role="listbox"
+          ref={listRef}
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            width: 240,
+            maxHeight: 320,
+            overflowY: 'auto',
+            background: SIDEBAR,
+            border: `1px solid ${BORDER}`,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+            padding: '4px 0',
+            // Above the globe overlays (dock panels, legends: zIndex 5).
+            zIndex: 30,
+          }}
+        >
+          {matches.length === 0 && (
+            <div style={{ padding: '6px 10px', fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>No match</div>
+          )}
+          {matches.map((o, i) => (
+            <div
+              key={o.value}
+              role="option"
+              aria-selected={o.value === value}
+              // mousedown, not click: fires before the input's blur/outside
+              // handling, so the pick always lands.
+              onMouseDown={(e) => {
+                e.preventDefault()
+                pick(o)
+              }}
+              onMouseEnter={() => setActive(i)}
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 8,
+                padding: '4px 10px',
+                cursor: 'pointer',
+                background: i === active ? RAISED : 'transparent',
+              }}
+            >
+              <span style={{ flex: 1, fontSize: TYPE.body, color: o.value === value ? HIGHLIGHT : WHITE }}>{o.label}</span>
+              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>{o.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -141,7 +275,7 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
       <Divider />
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <CountrySelect
+        <CountryPicker
           value={selectedCode}
           options={countries.map((c) => ({ value: c.country_code, label: c.country_name }))}
           onChange={onSelectCountry}
