@@ -13,13 +13,14 @@ function relativeTime(unixSecs) {
 
 // Compact one-line severity read from IODA's score magnitude. IODA scores are
 // unbounded and datasource-relative, so this is an ordinal cue, not a unit.
-function severityLabel(score) {
+// Shared with OutageTimeline so both read severity the same way.
+export function severityLabel(score) {
   if (score >= 200) return 'SEVERE'
   if (score >= 60) return 'MAJOR'
   return 'MINOR'
 }
 
-const SEVERITY_COLOR = { SEVERE: CRIMSON, MAJOR: AMBER, MINOR: MUTED }
+export const SEVERITY_COLOR = { SEVERE: CRIMSON, MAJOR: AMBER, MINOR: MUTED }
 
 const Dot = ({ color }) => (
   <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
