@@ -24,6 +24,16 @@ function formatDay(ms) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// IODA's detection sources in plain words, with the raw code kept for
+// readers who know it. Unknown codes pass through as-is.
+const SOURCE_LABEL = {
+  bgp: 'BGP routing',
+  'ping-slash24': 'active probing',
+  'merit-nt': 'network telescope',
+  gtr: 'Google traffic',
+}
+const sourceLabel = (code) => (SOURCE_LABEL[code] ? `${SOURCE_LABEL[code]} (${code})` : code ?? 'unknown')
+
 function formatDuration(secs) {
   if (secs >= 3600) return `${(secs / 3600).toFixed(1)}h`
   return `${Math.round(secs / 60)}m`
@@ -100,7 +110,10 @@ export default function OutageTimeline({ countryCode }) {
       >
         INTERNET OUTAGES (90D)
       </ChartTitle>
-      <div style={{ width: '100%', height: HEIGHT }}>
+      {/* Cleared on leaving the whole chart as well as the point: the point's
+          own mouseleave can be lost when the re-render swaps the element under
+          the pointer, which left a stale readout behind. */}
+      <div style={{ width: '100%', height: HEIGHT }} onMouseLeave={() => setHovered(null)}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid stroke={BORDER} vertical={false} />
@@ -132,6 +145,11 @@ export default function OutageTimeline({ countryCode }) {
             <Scatter
               data={points}
               fillOpacity={0.8}
+              // Each hover re-renders with a fresh `points` array, which
+              // otherwise replays the entry animation — remounting the dots
+              // under the pointer, losing their mouseleave (a stale readout)
+              // and making them briefly unhoverable.
+              isAnimationActive={false}
               onMouseEnter={(point) => setHovered(point?.payload ?? null)}
               onMouseLeave={() => setHovered(null)}
             >
@@ -142,9 +160,20 @@ export default function OutageTimeline({ countryCode }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 2 }}>
-        {points.length} outage{points.length === 1 ? '' : 's'} detected
-        {severe > 0 && ` · ${severe} severe`} · via IODA
+      {/* On hover the caption carries the hovered outage's detection source
+          and raw IODA score — too long for the title-line readout. */}
+      <div className="tabular" style={{ fontFamily: MONO, fontSize: TYPE.tick, color: MUTED, letterSpacing: '0.05em', marginTop: 2 }}>
+        {hovered ? (
+          <Readout
+            value={`Source: ${sourceLabel(hovered.datasource)}`}
+            detail={`IODA score ${Math.round(hovered.score).toLocaleString()}`}
+          />
+        ) : (
+          <>
+            {points.length} outage{points.length === 1 ? '' : 's'} detected
+            {severe > 0 && ` · ${severe} severe`} · via IODA
+          </>
+        )}
       </div>
     </section>
   )
