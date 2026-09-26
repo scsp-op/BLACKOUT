@@ -3,6 +3,17 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import Methodology from './components/Methodology'
 import { useRoute } from './lib/router'
+// Fonts are bundled with the app (self-hosted via @fontsource) rather than
+// loaded from Google Fonts, which sent every visitor's IP address to Google on
+// page load — the one third-party request the tool made. Only the weights the
+// UI uses.
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/ibm-plex-mono/400.css'
+import '@fontsource/ibm-plex-mono/500.css'
+import '@fontsource/ibm-plex-mono/600.css'
 import './index.css'
 
 function Root() {
