@@ -115,19 +115,22 @@ export default function Http3ShareChart({ countryCode }) {
               itemStyle={{ color: MUTED }}
               formatter={(value) => `${value.toFixed(2)}%`}
             />
-            {/* Stacked bottom-to-top: HTTP/1.x (most muted, legacy) below
-                HTTP/2 (neutral baseline) below HTTP/3 (the signal of
-                interest, drawn in the app's HUD/live-signal accent colour so
-                a collapse in its band is the thing the eye catches). */}
+            {/* Stacked bottom-to-top: HTTP/3 (the signal of interest, in the
+                app's HUD/live-signal accent) at the base, then HTTP/2, then
+                HTTP/1.x on top. HTTP/3 must be the bottom band: stacked on top
+                it rode along the 100% line whatever its share, so Iran's 0.06%
+                read as "HTTP/3 = 100%". At the base, its top edge reads
+                straight off the y-axis — and a collapse in it (QUIC blocking)
+                is a band dropping to the floor. */}
             <Area
               type="monotone"
-              dataKey="http1"
-              name="HTTP/1.x"
+              dataKey="http3"
+              name="HTTP/3 (QUIC)"
               stackId="share"
-              fill={DIM}
+              fill={CYAN}
               fillOpacity={0.5}
-              stroke={DIM}
-              strokeWidth={1}
+              stroke={CYAN}
+              strokeWidth={1.5}
             />
             <Area
               type="monotone"
@@ -141,13 +144,13 @@ export default function Http3ShareChart({ countryCode }) {
             />
             <Area
               type="monotone"
-              dataKey="http3"
-              name="HTTP/3 (QUIC)"
+              dataKey="http1"
+              name="HTTP/1.x"
               stackId="share"
-              fill={CYAN}
+              fill={DIM}
               fillOpacity={0.5}
-              stroke={CYAN}
-              strokeWidth={1.5}
+              stroke={DIM}
+              strokeWidth={1}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -155,16 +158,16 @@ export default function Http3ShareChart({ countryCode }) {
 
       <div style={{ display: 'flex', gap: 16, marginTop: 4, fontFamily: MONO, fontSize: TYPE.label }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: DIM, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>HTTP/1.x</span>
+          <div style={{ width: 8, height: 8, background: CYAN, flexShrink: 0 }} />
+          <span style={{ color: MUTED }}>HTTP/3 (QUIC)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div style={{ width: 8, height: 8, background: US_EXPOSURE, flexShrink: 0 }} />
           <span style={{ color: MUTED }}>HTTP/2</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 8, height: 8, background: CYAN, flexShrink: 0 }} />
-          <span style={{ color: MUTED }}>HTTP/3 (QUIC)</span>
+          <div style={{ width: 8, height: 8, background: DIM, flexShrink: 0 }} />
+          <span style={{ color: MUTED }}>HTTP/1.x</span>
         </div>
       </div>
 
