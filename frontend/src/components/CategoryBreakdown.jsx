@@ -46,10 +46,6 @@ export default function CategoryBreakdown({ countryCode }) {
 
   if (shown.length === 0) return null
 
-  // Scale bars to the worst category so the ranking is legible even when
-  // absolute category rates are low (categories aggregate many URLs).
-  const maxRate = Math.max(...shown.map((r) => r.anomaly_rate))
-
   return (
     <section>
       <div style={{ fontFamily: MONO, fontSize: TYPE.label, letterSpacing: '0.06em', color: MUTED, marginBottom: 8 }}>
@@ -59,7 +55,11 @@ export default function CategoryBreakdown({ countryCode }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {shown.map((r) => {
           const color = STATUS_COLOR[r.status] ?? DIM
-          const width = maxRate > 0 ? Math.max(3, (r.anomaly_rate / maxRate) * 100) : 3
+          // A true 0–100% track. Bars used to be scaled to the worst category,
+          // so a 28% rate drew a full bar that read as near-total blocking;
+          // category rates run low (they aggregate many URLs), and the honest
+          // length still ranks them clearly.
+          const width = Math.max(2, r.anomaly_rate * 100)
           return (
             <div key={r.category_code} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
