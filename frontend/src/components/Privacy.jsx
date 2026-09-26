@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { PROSE_CSS } from './MethodologyDoc'
 import { ISSUES_URL, REPO_URL } from '../lib/links'
 import { globePath, linkProps } from '../lib/router'
-import { BASE, BORDER, CYAN, HIGHLIGHT, MONO, MUTED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BASE, BORDER, CYAN, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 const LAST_UPDATED = '26 September 2026'
 
@@ -50,17 +50,22 @@ export default function Privacy() {
         <style>{`.privacy-nav:hover { color: ${CYAN} !important }`}</style>
         <a
           {...linkProps(globePath())}
-          style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, letterSpacing: '0.14em', color: WHITE, textDecoration: 'none', flexShrink: 0 }}
+          style={{ fontFamily: SANS, fontWeight: 600, fontSize: TYPE.title, letterSpacing: '0.08em', color: WHITE, textDecoration: 'none', flexShrink: 0 }}
         >
           BLACKOUT
         </a>
         <span style={{ width: 1, height: 18, background: BORDER, flexShrink: 0 }} />
+        {/* Styled like the main header's dock buttons, in their "open" state. */}
         <span
           style={{
+            height: 30,
+            display: 'flex',
+            alignItems: 'center',
             fontFamily: MONO,
             fontSize: TYPE.label,
-            letterSpacing: '0.14em',
-            padding: '5px 12px',
+            letterSpacing: '0.08em',
+            padding: '0 10px',
+            background: RAISED,
             border: `1px solid ${HIGHLIGHT}`,
             color: HIGHLIGHT,
             flexShrink: 0,

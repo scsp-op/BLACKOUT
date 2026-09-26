@@ -130,6 +130,20 @@ export const PROSE_CSS = `
 @media (max-width: 1000px) {
   .md-toc { display: none !important }
 }
+
+/* Phone widths (the app's NARROW breakpoint, lib/useNarrow.js): 18px body
+   text is large on a ~390px screen; 16px is the usual reading size there. */
+@media (max-width: 820px) {
+  .md-prose { font-size: 16px }
+}
+
+/* A document that opens with a short lead-in paragraph and a --- break
+   (the policy methodology) stacked the break's space on top of the first
+   heading's, leaving ~130px of void under two lines of text. Collapse that
+   first break so the lead-in reads as leading into the first section. Later
+   section breaks keep their full spacing. */
+.md-prose > p:first-child + hr { margin: 0 }
+.md-prose > p:first-child + hr + h2 { margin-top: 1.4em }
 `
 
 // Group the flat table of contents into sections and their subsections, so a
