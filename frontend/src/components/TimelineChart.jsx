@@ -1,5 +1,5 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { BORDER, CRIMSON, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, MONO, MUTED, SIDEBAR, TYPE, US_EXPOSURE, WHITE } from '../theme'
 
 // This renders inline underneath a single technology row in the sidebar, so
 // it's deliberately a sparkline: no grid, no legend, first/last tick only.
@@ -69,13 +69,17 @@ export default function TimelineChart({ rows }) {
                 name === 'rate' ? [`${value.toFixed(1)}%`, 'Anomalous'] : [value, name]
               }
             />
+            {/* Neutral slate, not crimson: this draws under every technology
+                row whatever its status, and a red history under an ACCESSIBLE
+                service read as "danger". The status chip in the row above is
+                what carries the verdict colour. */}
             <Area
               type="monotone"
               dataKey="rate"
               name="rate"
-              stroke={CRIMSON}
+              stroke={US_EXPOSURE}
               strokeWidth={1}
-              fill={CRIMSON}
+              fill={US_EXPOSURE}
               fillOpacity={0.18}
               dot={false}
             />
