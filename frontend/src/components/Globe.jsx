@@ -103,20 +103,28 @@ const LAND_COLOR = Cesium.Color.fromCssColorString('#0c1928')
 const LAND_HOVER_COLOR = Cesium.Color.fromCssColorString(LAND_HOVER_HEX)
 
 // Choropleth ramp for the composite censorship index (0 = free → 100 = most
-// censored): green → amber → crimson. Local constants so this doesn't depend on
-// the shared theme import line. The fill is translucent so borders and markers
-// still read on top.
-const CHORO_LOW = Cesium.Color.fromCssColorString('#6c9a5b')
-const CHORO_MID = Cesium.Color.fromCssColorString('#d97706')
-const CHORO_HIGH = Cesium.Color.fromCssColorString('#b31942')
-const CHORO_ALPHA = 0.55
+// censored): slate-teal → amber → crimson, with opacity rising alongside.
+// Designed on the colour *as rendered* (the translucent fill over LAND_COLOR),
+// where lightness climbs monotonically — ~L*25 → ~37 → ~48 — so the order
+// reads from brightness alone: for red-green colour-blind viewers, in greyscale
+// print, on a washed-out projector. (The previous green → amber → crimson
+// rendered green and amber at the same lightness, so "free" and "partly free"
+// merged for those readers, and made the most censored countries the darkest,
+// least visible land — backwards for this map's story.) Free countries recede;
+// censorship is what glows. IndexLegend.jsx's RAMP mirrors the rendered stops.
+const CHORO_STOPS = [
+  { color: Cesium.Color.fromCssColorString('#4f7480'), alpha: 0.4 },
+  { color: Cesium.Color.fromCssColorString('#d98a1f'), alpha: 0.5 },
+  { color: Cesium.Color.fromCssColorString('#e8475f'), alpha: 0.85 },
+]
 
 function choroplethColor(censorship) {
   const t = Math.max(0, Math.min(100, censorship)) / 100
-  const c = t <= 0.5
-    ? Cesium.Color.lerp(CHORO_LOW, CHORO_MID, t / 0.5, new Cesium.Color())
-    : Cesium.Color.lerp(CHORO_MID, CHORO_HIGH, (t - 0.5) / 0.5, new Cesium.Color())
-  return c.withAlpha(CHORO_ALPHA)
+  const [from, to, u] = t <= 0.5
+    ? [CHORO_STOPS[0], CHORO_STOPS[1], t / 0.5]
+    : [CHORO_STOPS[1], CHORO_STOPS[2], (t - 0.5) / 0.5]
+  const c = Cesium.Color.lerp(from.color, to.color, u, new Cesium.Color())
+  return c.withAlpha(from.alpha + (to.alpha - from.alpha) * u)
 }
 
 // Canvases are cached per (kind, hex) instead of created per country. There are

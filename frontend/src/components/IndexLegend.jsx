@@ -1,7 +1,9 @@
 import { BORDER, HIGHLIGHT, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
-// Matches the globe choropleth ramp in Globe.jsx (green → amber → crimson).
-const RAMP = 'linear-gradient(90deg, #6c9a5b 0%, #d97706 50%, #b31942 100%)'
+// The globe choropleth ramp (Globe.jsx CHORO_STOPS) as it renders on the map —
+// each stop's colour at its opacity over the dark land fill — so the key
+// matches what the eye sees rather than the brighter raw colours.
+const RAMP = 'linear-gradient(90deg, #273d4b 0%, #735224 50%, #c74057 100%)'
 
 // Unpositioned on purpose — App.jsx renders this inside a shared, centered
 // bottom row alongside CableLegend, so the pair centers as one group
