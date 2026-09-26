@@ -127,6 +127,14 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
       >
         METHODOLOGY
       </a>
+      <span style={{ width: 1, height: 12, background: BORDER }} />
+      <a
+        {...linkProps('/privacy')}
+        className="repo-link"
+        style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
+      >
+        PRIVACY
+      </a>
 
       <span style={{ width: 1, height: 12, background: BORDER }} />
 

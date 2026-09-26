@@ -69,10 +69,10 @@ export default function App() {
   // The URL is the source of truth for the selected country: selecting one
   // pushes /country/XX, so a country view can be shared or bookmarked, survives
   // a refresh, and Back/Forward step between the countries viewed. On a
-  // /methodology path the documents cover the globe, so the last globe
-  // selection is kept underneath rather than cleared.
+  // /methodology or /privacy path the documents cover the globe, so the last
+  // globe selection is kept underneath rather than cleared.
   const path = useRoute()
-  const onDocs = path === '/methodology' || path.startsWith('/methodology/')
+  const onDocs = path === '/privacy' || path === '/methodology' || path.startsWith('/methodology/')
   const lastCodeRef = useRef('')
   if (!onDocs) lastCodeRef.current = path.match(COUNTRY_PATH)?.[1].toUpperCase() ?? ''
   const selectedCode = lastCodeRef.current

@@ -19,7 +19,7 @@ const NUMBER_GUTTER = 30
 // instrument panel: 17px Inter at a 1.75 line height, in a measure capped near
 // 70 characters. Everything else is derived from theme.js so the documents
 // belong to the same surface as the chrome around them.
-const PROSE_CSS = `
+export const PROSE_CSS = `
 .md-prose {
   font-family: ${SANS};
   font-size: 18px;

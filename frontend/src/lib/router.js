@@ -1,8 +1,8 @@
 // A small router, hand-rolled.
 //
-// Routes: the globe `/`, a selected country `/country/XX` (see App.jsx), and
-// the methodology documents — `/methodology`, `/methodology/value` and
-// `/methodology/technical`.
+// Routes: the globe `/`, a selected country `/country/XX` (see App.jsx), the
+// methodology documents — `/methodology`, `/methodology/value` and
+// `/methodology/technical` — and the privacy notice `/privacy`.
 // That does not pay for react-router: the hard part of client-side routing is
 // making a deep link survive a refresh, and the backend already does it.
 // `fallback_service(spa_service(..))` in main.rs serves index.html for any path
@@ -19,10 +19,11 @@ function currentPath() {
   return window.location.pathname.replace(/\/+$/, '') || '/'
 }
 
-// The last path outside /methodology — the globe, or a /country/XX link. The
-// documents' "back to the globe" links go here, so returning from them keeps
-// the country that was open rather than resetting to the bare globe.
-const isDocs = (path) => path === '/methodology' || path.startsWith('/methodology/')
+// The last path outside the document overlays (/methodology, /privacy) — the
+// globe, or a /country/XX link. The documents' "back to the globe" links go
+// here, so returning from them keeps the country that was open rather than
+// resetting to the bare globe.
+const isDocs = (path) => path === '/privacy' || path === '/methodology' || path.startsWith('/methodology/')
 let lastGlobePath = isDocs(currentPath()) ? '/' : currentPath()
 window.addEventListener('popstate', () => {
   const path = currentPath()
