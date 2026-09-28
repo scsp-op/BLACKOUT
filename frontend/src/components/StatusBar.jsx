@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { AMBER, BORDER, BORDER_STRONG, CRIMSON, CYAN, LOCAL, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 import { SOURCES } from '../lib/sources'
 import { REPO_URL } from '../lib/links'
@@ -50,8 +51,30 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
   // don't duplicate the threshold here, just colour by its verdict.
   const stale = dataAge?.status === 'stale'
 
+  // Phones: whether the byline has wrapped onto its own line. The divider
+  // before it is only shown while it shares a line with PRIVACY, so it never
+  // dangles at a line end. Hidden with `visibility` (it keeps its space), so
+  // toggling it can't change the layout and flip the wrap back and forth.
+  const footerRef = useRef(null)
+  const privacyRef = useRef(null)
+  const bylineRef = useRef(null)
+  const [bylineWrapped, setBylineWrapped] = useState(false)
+  useLayoutEffect(() => {
+    if (!narrow) return undefined
+    const check = () => {
+      if (privacyRef.current && bylineRef.current) {
+        setBylineWrapped(bylineRef.current.offsetTop > privacyRef.current.offsetTop + 2)
+      }
+    }
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(footerRef.current)
+    return () => observer.disconnect()
+  }, [narrow])
+
   return (
     <footer
+      ref={footerRef}
       style={{
         flexShrink: 0,
         display: 'flex',
@@ -132,20 +155,26 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
       <span style={{ width: 1, height: 12, background: BORDER }} />
       <a
         {...linkProps('/privacy')}
+        ref={privacyRef}
         className="repo-link"
         style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
       >
         PRIVACY
       </a>
 
-      {/* No divider before the byline on phones: when the bar wraps it would
-          be left dangling at the end of the first line. */}
-      {!narrow && <span style={{ width: 1, height: 12, background: BORDER }} />}
+      <span
+        style={{
+          width: 1,
+          height: 12,
+          background: BORDER,
+          visibility: narrow && bylineWrapped ? 'hidden' : 'visible',
+        }}
+      />
 
       {/* Byline and repo link. Sized to the bar's existing 9px/24px rhythm —
           the 11px mark sits inside the 24px height, so nothing grows. One
           unit, so a phone-width wrap never splits the name from the icon. */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: narrow ? 6 : 0 }}>
+      <span ref={bylineRef} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <a
           className="repo-link"
           href="https://moumenalaoui.me"
