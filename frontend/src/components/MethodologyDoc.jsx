@@ -84,7 +84,7 @@ export const PROSE_CSS = `
 .md-prose pre code { padding: 0; background: none; border: 0; color: #c3cad6; font-size: 13.5px }
 
 /* Tables carry the source register and the index inputs — the densest, most
-   citable content in the value document — so they get the instrument
+   citable content in the policy document — so they get the instrument
    treatment: mono, tight, ruled, and horizontally scrollable rather than
    squeezed. */
 .md-prose table {

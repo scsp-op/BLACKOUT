@@ -30,7 +30,7 @@ use std::sync::LazyLock;
 
 /// A document as authored. `title` and `subtitle` live here rather than in the
 /// Markdown because they label the *chooser card*, where "BLACKOUT —
-/// Methodology" (the value document's own H1) would say nothing to someone
+/// Methodology" (the policy document's own H1) would say nothing to someone
 /// picking between two of them.
 struct Source {
     slug: &'static str,
@@ -45,12 +45,12 @@ struct Source {
 /// the chooser page and the table of contents all follow from it.
 const SOURCES: &[Source] = &[
     Source {
-        slug: "value",
+        slug: "policy",
         title: "Policy Methodology",
         subtitle: "What BLACKOUT measures, where every number comes from, and what it can \
                    and cannot be used to claim.",
         kind: "POLICY",
-        markdown: include_str!("../../../methodology/METHODOLOGY-value.md"),
+        markdown: include_str!("../../../methodology/METHODOLOGY-policy.md"),
     },
     Source {
         slug: "technical",
@@ -147,7 +147,7 @@ fn render(source: &Source) -> Doc {
     let (body, headings) = scan(source.markdown);
 
     let mut options = comrak::Options::default();
-    // GFM. The value document uses tables heavily (the source register, the
+    // GFM. The policy document uses tables heavily (the source register, the
     // index inputs); footnotes and strikethrough cost nothing to allow and are
     // the other two things a prose author reaches for.
     options.extension.table = true;

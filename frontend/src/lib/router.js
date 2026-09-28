@@ -1,7 +1,7 @@
 // A small router, hand-rolled.
 //
 // Routes: the globe `/`, a selected country `/country/XX` (see App.jsx), the
-// methodology documents — `/methodology`, `/methodology/value` and
+// methodology documents — `/methodology`, `/methodology/policy` and
 // `/methodology/technical` — and the privacy notice `/privacy`.
 // That does not pay for react-router: the hard part of client-side routing is
 // making a deep link survive a refresh, and the backend already does it.

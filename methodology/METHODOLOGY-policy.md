@@ -4,9 +4,9 @@
 
 ---
 
-## Bottom line
+## 1. Bottom line
 
-BLACKOUT is an open-source prototype that brings together a dozen public sources on internet censorship and shutdowns into a single, country-by-country view.
+BLACKOUT is an open-source tracker that brings together a dozen public sources on internet censorship and shutdowns into a single, country-by-country view.
 
 It does not collect new data. Its contribution is to place evidence that normally sits in separate places, held by separate research communities, side by side. With everything in one place, an analyst can see what kind of repression is happening in a country and how strong the evidence for it is.
 
@@ -14,7 +14,7 @@ BLACKOUT is built to strengthen **detection**, the first step in any response to
 
 ---
 
-## Two kinds of repression
+## 2. Two kinds of repression
 
 Governments restrict the internet in two fundamentally different ways.
 
@@ -29,7 +29,7 @@ A response designed for one does not answer the other. Telling them apart is the
 
 BLACKOUT places both kinds of evidence in the same view.
 
-### Example: Iran, winter 2025–26
+### 2.1 Example: Iran, winter 2025–26
 
 Iran's response to protests in late 2025 moved through both stages.
 
@@ -43,7 +43,7 @@ These are the kinds of signals BLACKOUT brings together: changes in traffic patt
 
 ---
 
-## What BLACKOUT shows
+## 3. What BLACKOUT shows
 
 | Question | What BLACKOUT provides |
 | --- | --- |
@@ -64,7 +64,7 @@ Three principles apply throughout:
 
 ---
 
-## Where BLACKOUT fits
+## 4. Where BLACKOUT fits
 
 Effective circumvention depends on four operations, performed continuously as censors adapt:
 
@@ -81,7 +81,7 @@ That role matters for policy. A standing government response to digital repressi
 
 ---
 
-## Two kinds of evidence, kept separate
+## 5. Two kinds of evidence, kept separate
 
 BLACKOUT presents two different kinds of evidence and deliberately does not blend them.
 
@@ -95,7 +95,7 @@ The two are kept apart because **the disagreements between them are often the mo
 
 ---
 
-## What BLACKOUT cannot tell you
+## 6. What BLACKOUT cannot tell you
 
 - **Who is responsible, or why.** BLACKOUT shows independent signals side by side, but it does not combine them into a finding that a government deliberately imposed a shutdown or blocked a service. The signals can point strongly in one direction. Attribution still requires evidence BLACKOUT does not hold.
 - **What is happening this minute.** BLACKOUT refreshes its sources on a regular cycle, every six hours by default, and each source has its own publication delays. It is periodically updated, not real-time.
@@ -108,7 +108,7 @@ The two are kept apart because **the disagreements between them are often the mo
 
 ---
 
-## Using BLACKOUT responsibly
+## 7. Using BLACKOUT responsibly
 
 - **Look for agreement.** The strongest findings come from independent signals pointing the same way. For example, a detected outage, a collapse in routing visibility, and a spike in circumvention use in the same country at the same time. Any one of these alone is a lead, not a conclusion.
 - **Treat divergence as a finding.** When the expert assessment and the observed evidence disagree, ask why.
@@ -117,7 +117,7 @@ The two are kept apart because **the disagreements between them are often the mo
 
 ---
 
-## Sources
+## 8. Sources
 
 | Source | What it contributes | How often the source updates |
 | --- | --- | --- |
