@@ -53,12 +53,15 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
   return (
     <footer
       style={{
-        height: 24,
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        gap: narrow ? 6 : 10,
-        padding: narrow ? '0 12px' : '0 16px',
+        // Phones: centred, and allowed to wrap onto a second centred line
+        // when the items don't fit (they overflowed below ~390px wide,
+        // clipping the byline). Desktop: one 24px row, as before.
+        ...(narrow
+          ? { minHeight: 24, flexWrap: 'wrap', justifyContent: 'center', columnGap: 6, rowGap: 2, padding: '4px 12px' }
+          : { height: 24, gap: 10, padding: '0 16px' }),
         background: SIDEBAR,
         borderTop: `1px solid ${BORDER}`,
         fontFamily: MONO,
@@ -135,11 +138,14 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
         PRIVACY
       </a>
 
-      <span style={{ width: 1, height: 12, background: BORDER }} />
+      {/* No divider before the byline on phones: when the bar wraps it would
+          be left dangling at the end of the first line. */}
+      {!narrow && <span style={{ width: 1, height: 12, background: BORDER }} />}
 
       {/* Byline and repo link. Sized to the bar's existing 9px/24px rhythm —
-          the 11px mark sits inside the 24px height, so nothing grows. */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          the 11px mark sits inside the 24px height, so nothing grows. One
+          unit, so a phone-width wrap never splits the name from the icon. */}
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: narrow ? 6 : 0 }}>
         <a
           className="repo-link"
           href="https://moumenalaoui.me"
