@@ -49,17 +49,17 @@ These are the kinds of signals BLACKOUT brings together: changes in traffic patt
 | --- | --- |
 | Is this country being filtered, disconnected, or both? | Outage detection, routing visibility, and measured blocking shown side by side |
 | Which circumvention tools are people still using? | Estimated use of the Tor network, including the different kinds of hidden entry points (obfs4, Snowflake, WebTunnel) that people use when Tor itself is blocked |
-| Can people reach messaging services? | Availability of WhatsApp, Telegram, Facebook Messenger, and Signal, reported as blocked only on confirmed evidence |
+| Can people reach messaging services? | Availability of WhatsApp, Telegram, Facebook Messenger, and Signal, measured with tests built for each app rather than by whether its website loads |
 | Can people reach major AI services? | Whether the websites of OpenAI, Claude, DeepSeek, and Hugging Face are reachable from inside the country |
 | What kinds of content are being blocked? | Restrictions on news media, political content, human rights material, and other categories over the past six months |
 | Is the situation getting worse? | Ninety days of outage history and daily blocking records going back to January 2024 |
-| Could a shutdown here be enforced, or circumvented? | Submarine cable landings, domestic exchange points, and satellite internet availability |
+| Could a shutdown here be enforced, or circumvented? | Submarine cable landings, domestic exchange points, and known restrictions on Starlink satellite service |
 | How does this country compare to others? | A Censorship Index covering about 180 countries, with its components shown alongside it |
 
 Three principles apply throughout:
 
 - **Missing data is shown as missing.** A country with no measurements is shown as having no data, never as unrestricted.
-- **Findings are cautious by design.** A handful of failed tests can reflect ordinary network trouble, so BLACKOUT reports a block only when the evidence is substantial. Otherwise it reports the result as "likely blocked" or "inconclusive."
+- **Findings are cautious by design.** A handful of failed tests can reflect ordinary network trouble, so BLACKOUT reports a block only when the evidence is substantial: more than 70 percent of at least 11 tests over the past 90 days show signs of interference. Weaker evidence is reported as "likely blocked" or "inconclusive."
 - **Every figure is traceable.** Each display names its source, and the Censorship Index always shows the scores it is built from.
 
 ---
@@ -85,7 +85,7 @@ That role matters for policy. A standing government response to digital repressi
 
 BLACKOUT presents two different kinds of evidence and deliberately does not blend them.
 
-**Expert assessment: the Censorship Index.** This describes a country's overall environment for free expression. It combines two established international assessments: the V-Dem Institute's Freedom of Expression Index and Reporters Without Borders' Press Freedom Index. Freedom of expression is weighted more heavily, roughly five to three. The combined score is BLACKOUT's own construction; the underlying assessments are not. Both component scores are always displayed, so anyone who prefers a different weighting can apply one. On every score, a higher number means more freedom.
+**Expert assessment: the Censorship Index.** This describes a country's overall environment for free expression. It combines two established international assessments: the V-Dem Institute's Freedom of Expression Index and Reporters Without Borders' Press Freedom Index. Freedom of expression is weighted more heavily, five to three. The combined score is BLACKOUT's own construction; the underlying assessments are not. Both component scores are always displayed, so anyone who prefers a different weighting can apply one. On every index score, a higher number means more freedom.
 
 Alongside the index, BLACKOUT shows three V-Dem measures that focus specifically on the internet: government filtering, government shutdowns, and government censorship effort. These speak directly to state conduct online and are often the most decision-relevant figures in the tool.
 
@@ -100,11 +100,11 @@ The two are kept apart because **the disagreements between them are often the mo
 - **Who is responsible, or why.** BLACKOUT shows independent signals side by side, but it does not combine them into a finding that a government deliberately imposed a shutdown or blocked a service. The signals can point strongly in one direction. Attribution still requires evidence BLACKOUT does not hold.
 - **What is happening this minute.** BLACKOUT refreshes its sources on a regular cycle, every six hours by default, and each source has its own publication delays. It is periodically updated, not real-time.
 - **Whether an AI service actually works.** AI reachability reflects whether a provider's websites can be reached, not whether its services or models are usable from inside the country.
-- **Whether a circumvention tool works right now.** Tor figures are estimates of how many people are using each tool, not tests of whether the tool is currently reachable.
+- **Whether a circumvention tool works right now.** Tor figures are estimates of how many people are using each tool. Direct tests of Tor, Psiphon, and Snowflake are pooled over 90 days. Neither confirms that a tool is reachable at this moment.
 - **Anything about places no one is measuring.** Network measurement depends on volunteers, and coverage is uneven. Where BLACKOUT reports insufficient data, the question is open. It does not mean the answer is favorable.
 - **What will happen next.** BLACKOUT reports what has been observed. It makes no forecasts.
 
-**Limits of the Censorship Index.** The index is built from annual, expert-based assessments and describes a country's general environment, not recent events. Some countries are covered by only one of the two assessments; BLACKOUT shows how many sources each score rests on. Countries may be scored from different years, and each year is displayed. The weighting is a reasoned judgment, not a statistically derived one. The press freedom figures come from an edition that predates Reporters Without Borders' 2022 change in methodology. The three internet-specific V-Dem measures are fixed at their 2025 edition.
+**Limits of the Censorship Index.** The index is built from annual, expert-based assessments and describes a country's general environment, not recent events. Some countries are covered by only one of the two assessments; BLACKOUT shows which sources each score rests on. Countries may be scored from different years, and each year is displayed. The weighting is a reasoned judgment, not a statistically derived one. The press freedom figures come from an edition that predates Reporters Without Borders' 2022 change in methodology, and run through 2021. The three internet-specific V-Dem measures are fixed at their 2025 edition.
 
 ---
 
@@ -124,16 +124,16 @@ The two are kept apart because **the disagreements between them are often the mo
 | OONI (Open Observatory of Network Interference) | Blocking of websites, AI services, circumvention tools, and messaging apps; blocked content categories; blocking history | Continuously |
 | IODA (Georgia Tech) | National internet outages | Continuously |
 | Tor Metrics (Tor Project) | Estimated circumvention use, including by type of hidden entry point | Daily |
-| Cloudflare Radar | Traffic patterns; confirmation of outages | Continuously |
+| Cloudflare Radar | Traffic patterns: the share of web traffic using each version of the web's core protocol | Continuously |
 | RIPE NCC (RIPEstat) | Routing visibility: whether a country remains reachable on the internet's map | Continuously |
-| Internet Society Pulse | Internet Resilience Index | Periodically |
+| Internet Society Pulse | Internet Resilience Index | Quarterly |
 | V-Dem Institute *(via Our World in Data)* | Freedom of Expression Index: Censorship Index component | Annually |
-| Reporters Without Borders *(via Our World in Data)* | Press Freedom Index: Censorship Index component | Annually |
+| Reporters Without Borders *(via Our World in Data)* | Press Freedom Index (pre-2022 edition): Censorship Index component | Final year 2021 |
 | V-Dem Institute | Internet filtering, shutdown, and censorship measures | Fixed at 2025 edition |
 | PeeringDB | Domestic internet exchange points | Periodic reference data |
 | TeleGeography | Submarine cable routes and landing points | Periodic reference data |
 | CelesTrak / SatNOGS | Satellite positions | Continuously |
-| Compiled from public sources | Satellite internet availability by country | Maintained by hand; sources cited |
+| Compiled from public sources | Starlink restrictions by country | Maintained by hand; sources cited |
 
 ---
 
