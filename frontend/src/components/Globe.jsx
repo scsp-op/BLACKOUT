@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import * as topojson from 'topojson-client'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { CRIMSON } from '../theme'
+import { CRIMSON, MUTED, TYPE } from '../theme'
 import { CATEGORY_COLOR_HEX } from './SatelliteLegend'
 
 const NUMERIC_CODE_ALIASES = new Map([[732, 'MA']])
@@ -54,6 +54,16 @@ function outageRadius(score) {
 // Empty-space colour behind/around the globe (skybox is off — see init —
 // so this, not a starfield texture, is what fills it).
 const SPACE_BG = '#03060a'
+
+// Phones and tablets (a coarse primary pointer) get a lighter renderer — see
+// the Viewer options and resolution cap in init.
+const TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+// Plain-language notices for when the globe can't render (see `failure`).
+const FAILURE_TEXT = {
+  webgl: 'The 3D globe needs WebGL, which this browser has turned off or doesn’t support. Rankings, outages and country details still work.',
+  render: 'The 3D globe stopped: this device ran out of graphics memory. Reload the page to bring it back. Rankings, outages and country details still work.',
+}
 
 // Cesium's default camera FOV (60°), applied to the canvas's wider axis. The
 // preRender hook in init derives the actual FOV from it (see there).
@@ -256,6 +266,10 @@ export default function Globe({
   const cableLandingRef = useRef(null)
   const cablesBuiltRef = useRef(false)
   const [ready, setReady] = useState(false)
+  // 'webgl' (no usable WebGL context) or 'render' (rendering failed, e.g. the
+  // context was reclaimed) — shown as a plain notice over the globe area. The
+  // rest of the app (search, panels, country details) keeps working.
+  const [failure, setFailure] = useState(null)
 
   // Keep the latest callbacks in refs so the init effect (which only runs
   // once) always calls the current prop without needing to re-run.
@@ -297,9 +311,19 @@ export default function Globe({
         creditContainer:      Object.assign(document.createElement('div'), { style: 'display:none' }),
         // Render at the display's native devicePixelRatio instead of Cesium's
         // default 1x CSS-pixel resolution — the globe rendered soft/low-res on
-        // HiDPI (Retina) screens, most visibly when zoomed out. MSAA is already
-        // 4x by default, so this is purely a pixel-density fix.
+        // HiDPI (Retina) screens, most visibly when zoomed out. (Capped on
+        // touch devices below.)
         useBrowserRecommendedResolution: false,
+        // Touch devices (phones, tablets): no MSAA. Mobile browsers — iOS
+        // Safari especially — give WebGL a tight memory budget, and 4x MSAA
+        // at a phone's 3x pixel density was enough to get the context taken
+        // away, after which Cesium threw "Expected width to be greater than
+        // 0" on the next frame. Paired with the resolution cap below.
+        msaaSamples: TOUCH ? 1 : 4,
+        // Cesium's own error panels are developer-facing (stack traces, "visit
+        // get.webgl.org"); failures are shown as a plain notice instead — see
+        // `failure` below.
+        showRenderLoopErrors: false,
       })
 
       // Bail out if this effect was cleaned up (e.g. React StrictMode
@@ -308,6 +332,27 @@ export default function Globe({
         viewer.destroy()
         return
       }
+
+      // Touch devices: cap the render resolution at 2x rather than a phone's
+      // native 3x — with MSAA off, about a tenth of the graphics memory, which
+      // is what keeps mobile browsers from reclaiming the context.
+      if (TOUCH) {
+        const dpr = window.devicePixelRatio || 1
+        viewer.resolutionScale = Math.min(dpr, 2) / dpr
+      }
+
+      // If rendering fails anyway — typically the browser reclaiming the WebGL
+      // context under memory pressure (Cesium doesn't handle context loss, so
+      // it surfaces as an error on the next frame) — Cesium stops its render
+      // loop; show a plain notice rather than a blank or frozen globe.
+      viewer.scene.renderError.addEventListener((_, error) => {
+        console.error(error)
+        setFailure('render')
+      })
+      viewer.scene.canvas.addEventListener('webglcontextlost', () => {
+        viewer.useDefaultRenderLoop = false
+        setFailure('render')
+      })
 
       viewer.scene.globe.enableLighting = false
       // Ocean = the globe base colour: lifted off pure black so it doesn't read
@@ -588,7 +633,11 @@ export default function Globe({
 
     init().catch(error => {
       console.error(error)
-      onLoadErrorRef.current?.(error instanceof Error ? error.message : 'Failed to initialize globe')
+      // No viewer means the Viewer constructor itself threw — in practice, no
+      // usable WebGL context (disabled, blocked, or unsupported). That gets the
+      // plain notice; anything later in init is reported as before.
+      if (!viewer) setFailure('webgl')
+      else onLoadErrorRef.current?.(error instanceof Error ? error.message : 'Failed to initialize globe')
     })
 
     return () => {
@@ -979,18 +1028,40 @@ export default function Globe({
   // offsetX from <main>'s, and the overflow is clipped by <main> — so the
   // globe moves without exposing an uncovered strip at either edge.
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'absolute',
-        // Vertically the same trick: extending the top by the covered share
-        // puts the centre in the middle of the uncovered part.
-        top: `${-coverBottom * 100}%`,
-        height: `${100 + coverBottom * 100}%`,
-        left: coverRight ? `${-coverRight * 100}%` : Math.min(0, 2 * offsetX),
-        width: coverRight ? `${100 + coverRight * 100}%` : `calc(100% + ${2 * Math.abs(offsetX)}px)`,
-        transition: 'left 200ms ease, width 200ms ease, top 200ms ease, height 200ms ease',
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        style={{
+          position: 'absolute',
+          // Vertically the same trick: extending the top by the covered share
+          // puts the centre in the middle of the uncovered part.
+          top: `${-coverBottom * 100}%`,
+          height: `${100 + coverBottom * 100}%`,
+          left: coverRight ? `${-coverRight * 100}%` : Math.min(0, 2 * offsetX),
+          width: coverRight ? `${100 + coverRight * 100}%` : `calc(100% + ${2 * Math.abs(offsetX)}px)`,
+          transition: 'left 200ms ease, width 200ms ease, top 200ms ease, height 200ms ease',
+        }}
+      />
+      {failure && (
+        <div
+          role="status"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            background: SPACE_BG,
+            // Under the dock panels and legends (zIndex 5), which still work.
+            zIndex: 1,
+          }}
+        >
+          <p style={{ maxWidth: 360, textAlign: 'center', fontSize: TYPE.title, lineHeight: 1.6, color: MUTED }}>
+            {FAILURE_TEXT[failure]}
+          </p>
+        </div>
+      )}
+    </>
   )
 }

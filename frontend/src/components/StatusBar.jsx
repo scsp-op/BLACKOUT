@@ -140,9 +140,15 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
       {/* Byline and repo link. Sized to the bar's existing 9px/24px rhythm —
           the 11px mark sits inside the 24px height, so nothing grows. */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-        <span style={{ color: MUTED }}>
+        <a
+          className="repo-link"
+          href="https://moumenalaoui.me"
+          target="_blank"
+          rel="noreferrer noopener"
+          style={{ color: MUTED, textDecoration: 'none' }}
+        >
           BUILT BY <span style={{ color: WHITE }}>MOUMEN ALAOUI</span>
-        </span>
+        </a>
         <a
           className="repo-link"
           href={REPO_URL}
