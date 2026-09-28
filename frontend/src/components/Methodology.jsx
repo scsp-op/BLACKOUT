@@ -56,7 +56,7 @@ function DocPanel({ doc }) {
           {doc.kind}
         </span>
         <span className="tabular" style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', color: MUTED }}>
-          {doc.sections.length} SECTIONS · {doc.word_count.toLocaleString()} WORDS
+          {doc.sections.length} SECTIONS
         </span>
       </div>
 

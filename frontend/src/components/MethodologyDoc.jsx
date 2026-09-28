@@ -477,7 +477,7 @@ export default function MethodologyDoc({ slug }) {
               flexShrink: 0,
             }}
           >
-            {sectionCount} SECTIONS · {doc.word_count.toLocaleString()} WORDS
+            {sectionCount} SECTIONS
           </span>
         </header>
 
