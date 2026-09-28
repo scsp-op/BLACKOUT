@@ -658,10 +658,14 @@ export default function App() {
               pointerEvents: 'none',
             }}
           >
-            <div style={{ pointerEvents: 'auto' }}>
+            {/* display: flex on both wrappers lets each legend box stretch to
+                the row's height, so the two boxes match — Cables is naturally
+                a few px shorter than Index, and top-aligned it sat visibly
+                high. Their contents are centred vertically inside. */}
+            <div style={{ pointerEvents: 'auto', display: 'flex' }}>
               <IndexLegend show={showIndex} onToggle={() => setShowIndex((v) => !v)} compact={narrow} />
             </div>
-            <div style={{ pointerEvents: 'auto' }}>
+            <div style={{ pointerEvents: 'auto', display: 'flex' }}>
               <CableLegend
                 show={showCables}
                 onToggle={() => setShowCables((v) => !v)}
