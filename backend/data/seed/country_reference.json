@@ -49,7 +49,7 @@
   },
   {
     "country_code": "AG",
-    "country_name": "Antigua and Barb.",
+    "country_name": "Antigua and Barbuda",
     "alpha3": "ATG",
     "iso_numeric": "028",
     "region": "Americas",
@@ -257,7 +257,7 @@
   },
   {
     "country_code": "BA",
-    "country_name": "Bosnia and Herz.",
+    "country_name": "Bosnia and Herzegovina",
     "alpha3": "BIH",
     "iso_numeric": "070",
     "region": "Europe",
@@ -625,7 +625,7 @@
   },
   {
     "country_code": "CD",
-    "country_name": "Dem. Rep. Congo",
+    "country_name": "Democratic Republic of the Congo",
     "alpha3": "COD",
     "iso_numeric": "180",
     "region": "Africa",
@@ -641,7 +641,7 @@
   },
   {
     "country_code": "CF",
-    "country_name": "Central African Rep.",
+    "country_name": "Central African Republic",
     "alpha3": "CAF",
     "iso_numeric": "140",
     "region": "Africa",
@@ -705,7 +705,7 @@
   },
   {
     "country_code": "CK",
-    "country_name": "Cook Is.",
+    "country_name": "Cook Islands",
     "alpha3": "COK",
     "iso_numeric": "184",
     "region": "Oceania",
@@ -961,7 +961,7 @@
   },
   {
     "country_code": "DO",
-    "country_name": "Dominican Rep.",
+    "country_name": "Dominican Republic",
     "alpha3": "DOM",
     "iso_numeric": "214",
     "region": "Americas",
@@ -1121,7 +1121,7 @@
   },
   {
     "country_code": "FK",
-    "country_name": "Falkland Is.",
+    "country_name": "Falkland Islands",
     "alpha3": "FLK",
     "iso_numeric": "238",
     "region": "Americas",
@@ -1153,7 +1153,7 @@
   },
   {
     "country_code": "FO",
-    "country_name": "Faeroe Is.",
+    "country_name": "Faroe Islands",
     "alpha3": "FRO",
     "iso_numeric": "234",
     "region": "Europe",
@@ -1377,7 +1377,7 @@
   },
   {
     "country_code": "GQ",
-    "country_name": "Eq. Guinea",
+    "country_name": "Equatorial Guinea",
     "alpha3": "GNQ",
     "iso_numeric": "226",
     "region": "Africa",
@@ -1409,7 +1409,7 @@
   },
   {
     "country_code": "GS",
-    "country_name": "S. Geo. and the Is.",
+    "country_name": "South Georgia and the South Sandwich Islands",
     "alpha3": "SGS",
     "iso_numeric": "239",
     "region": "Americas",
@@ -1505,7 +1505,7 @@
   },
   {
     "country_code": "HM",
-    "country_name": "Heard I. and McDonald Is.",
+    "country_name": "Heard Island and McDonald Islands",
     "alpha3": "HMD",
     "iso_numeric": "334",
     "region": "Oceania",
@@ -1665,7 +1665,7 @@
   },
   {
     "country_code": "IO",
-    "country_name": "Br. Indian Ocean Ter.",
+    "country_name": "British Indian Ocean Territory",
     "alpha3": "IOT",
     "iso_numeric": "086",
     "region": "Africa",
@@ -1889,7 +1889,7 @@
   },
   {
     "country_code": "KN",
-    "country_name": "St. Kitts and Nevis",
+    "country_name": "Saint Kitts and Nevis",
     "alpha3": "KNA",
     "iso_numeric": "659",
     "region": "Americas",
@@ -1953,7 +1953,7 @@
   },
   {
     "country_code": "KY",
-    "country_name": "Cayman Is.",
+    "country_name": "Cayman Islands",
     "alpha3": "CYM",
     "iso_numeric": "136",
     "region": "Americas",
@@ -2257,7 +2257,7 @@
   },
   {
     "country_code": "MH",
-    "country_name": "Marshall Is.",
+    "country_name": "Marshall Islands",
     "alpha3": "MHL",
     "iso_numeric": "584",
     "region": "Oceania",
@@ -2353,7 +2353,7 @@
   },
   {
     "country_code": "MP",
-    "country_name": "N. Mariana Is.",
+    "country_name": "Northern Mariana Islands",
     "alpha3": "MNP",
     "iso_numeric": "580",
     "region": "Oceania",
@@ -2769,7 +2769,7 @@
   },
   {
     "country_code": "PF",
-    "country_name": "Fr. Polynesia",
+    "country_name": "French Polynesia",
     "alpha3": "PYF",
     "iso_numeric": "258",
     "region": "Oceania",
@@ -2849,7 +2849,7 @@
   },
   {
     "country_code": "PM",
-    "country_name": "St. Pierre and Miquelon",
+    "country_name": "Saint Pierre and Miquelon",
     "alpha3": "SPM",
     "iso_numeric": "666",
     "region": "Americas",
@@ -2865,7 +2865,7 @@
   },
   {
     "country_code": "PN",
-    "country_name": "Pitcairn Is.",
+    "country_name": "Pitcairn Islands",
     "alpha3": "PCN",
     "iso_numeric": "612",
     "region": "Oceania",
@@ -3073,7 +3073,7 @@
   },
   {
     "country_code": "SB",
-    "country_name": "Solomon Is.",
+    "country_name": "Solomon Islands",
     "alpha3": "SLB",
     "iso_numeric": "090",
     "region": "Oceania",
@@ -3297,7 +3297,7 @@
   },
   {
     "country_code": "SS",
-    "country_name": "S. Sudan",
+    "country_name": "South Sudan",
     "alpha3": "SSD",
     "iso_numeric": "728",
     "region": "Africa",
@@ -3377,7 +3377,7 @@
   },
   {
     "country_code": "SZ",
-    "country_name": "eSwatini",
+    "country_name": "Eswatini",
     "alpha3": "SWZ",
     "iso_numeric": "748",
     "region": "Africa",
@@ -3393,7 +3393,7 @@
   },
   {
     "country_code": "TC",
-    "country_name": "Turks and Caicos Is.",
+    "country_name": "Turks and Caicos Islands",
     "alpha3": "TCA",
     "iso_numeric": "796",
     "region": "Americas",
@@ -3425,7 +3425,7 @@
   },
   {
     "country_code": "TF",
-    "country_name": "Fr. S. Antarctic Lands",
+    "country_name": "French Southern and Antarctic Lands",
     "alpha3": "ATF",
     "iso_numeric": "260",
     "region": "Africa",
@@ -3761,7 +3761,7 @@
   },
   {
     "country_code": "VC",
-    "country_name": "St. Vin. and Gren.",
+    "country_name": "Saint Vincent and the Grenadines",
     "alpha3": "VCT",
     "iso_numeric": "670",
     "region": "Americas",
@@ -3793,7 +3793,7 @@
   },
   {
     "country_code": "VG",
-    "country_name": "British Virgin Is.",
+    "country_name": "British Virgin Islands",
     "alpha3": "VGB",
     "iso_numeric": "092",
     "region": "Americas",
@@ -3809,7 +3809,7 @@
   },
   {
     "country_code": "VI",
-    "country_name": "U.S. Virgin Is.",
+    "country_name": "U.S. Virgin Islands",
     "alpha3": "VIR",
     "iso_numeric": "850",
     "region": "Americas",
@@ -3857,7 +3857,7 @@
   },
   {
     "country_code": "WF",
-    "country_name": "Wallis and Futuna Is.",
+    "country_name": "Wallis and Futuna",
     "alpha3": "WLF",
     "iso_numeric": "876",
     "region": "Oceania",

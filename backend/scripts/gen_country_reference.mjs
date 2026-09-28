@@ -38,6 +38,41 @@ const FOCUS = new Set(['IR', 'SY', 'AE', 'SA', 'IQ'])
 // sparse to be useful, and the frontend aliases its atlas polygon to MA.
 const EXCLUDED_CODES = new Set(['EH'])
 
+// Full display names for the basemap labels that are map abbreviations
+// ("Dem. Rep. Congo", "St. Vin. and Gren.", "Cayman Is.") or its styling
+// ("eSwatini"). The basemap name is otherwise preferred (see below); these are
+// the entries where it reads as a cartographic label rather than a name.
+const DISPLAY_NAMES = {
+  AG: 'Antigua and Barbuda',
+  BA: 'Bosnia and Herzegovina',
+  CD: 'Democratic Republic of the Congo',
+  CF: 'Central African Republic',
+  CK: 'Cook Islands',
+  DO: 'Dominican Republic',
+  FK: 'Falkland Islands',
+  FO: 'Faroe Islands',
+  GQ: 'Equatorial Guinea',
+  GS: 'South Georgia and the South Sandwich Islands',
+  HM: 'Heard Island and McDonald Islands',
+  IO: 'British Indian Ocean Territory',
+  KN: 'Saint Kitts and Nevis',
+  KY: 'Cayman Islands',
+  MH: 'Marshall Islands',
+  MP: 'Northern Mariana Islands',
+  PF: 'French Polynesia',
+  PM: 'Saint Pierre and Miquelon',
+  PN: 'Pitcairn Islands',
+  SB: 'Solomon Islands',
+  SS: 'South Sudan',
+  SZ: 'Eswatini',
+  TC: 'Turks and Caicos Islands',
+  TF: 'French Southern and Antarctic Lands',
+  VC: 'Saint Vincent and the Grenadines',
+  VG: 'British Virgin Islands',
+  VI: 'U.S. Virgin Islands',
+  WF: 'Wallis and Futuna',
+}
+
 // The basemap carries 5 features with no ISO numeric id, because they are
 // territories ISO 3166-1 does not assign a code to. Only Kosovo gets a code
 // here — XK is the user-assigned code in de facto standard use (and what the
@@ -180,7 +215,7 @@ for (const c of iso) {
     // Prefer the basemap's short display name ("Iran") over the ISO legal name
     // ("Iran, Islamic Republic of"): it is what the globe labels and what the
     // existing researched rows in countries.json already use.
-    country_name: geo?.name ?? c.name,
+    country_name: DISPLAY_NAMES[code] ?? geo?.name ?? c.name,
     alpha3: c['alpha-3'],
     iso_numeric: numeric,
     region: c.region || null,
