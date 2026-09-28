@@ -43,6 +43,21 @@ function GithubMark({ size = 11 }) {
   )
 }
 
+// METHODOLOGY and PRIVACY — the pages the bar navigates to, as against the
+// source credits — carry a faint resting underline so they read as links
+// without a colour of their own. BORDER_STRONG, the tone of the source list's
+// separators, keeps it quieter than the text.
+const PAGE_LINK_UNDERLINE = {
+  textDecoration: 'underline',
+  textDecorationColor: BORDER_STRONG,
+  textDecorationThickness: 1,
+  textUnderlineOffset: 3,
+}
+
+// Fades the source list's edges while names are scrolled out past them.
+const sourcesFade = ({ left, right }) =>
+  `linear-gradient(to right, ${left ? 'transparent, #000 32px' : '#000'}, ${right ? '#000 calc(100% - 32px), transparent' : '#000'})`
+
 // `narrow` (phone width) drops the sources list and the link indicator, which
 // don't fit; data age, methodology and the byline stay.
 export default function StatusBar({ status = 'ok', dataAge = null, narrow = false }) {
@@ -72,6 +87,29 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
     return () => observer.disconnect()
   }, [narrow])
 
+  // Desktop: below the ~1300px the full row needs, the source list gives way
+  // first — it scrolls sideways in the room left over rather than pushing the
+  // byline off-screen, fading at whichever edge has more names past it.
+  const sourcesRef = useRef(null)
+  const [sourcesMore, setSourcesMore] = useState({ left: false, right: false })
+  useLayoutEffect(() => {
+    const el = sourcesRef.current
+    if (narrow || !el) return undefined
+    const check = () => {
+      const left = el.scrollLeft > 1
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      setSourcesMore((m) => (m.left === left && m.right === right ? m : { left, right }))
+    }
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener('scroll', check)
+      observer.disconnect()
+    }
+  }, [narrow])
+
   return (
     <footer
       ref={footerRef}
@@ -88,17 +126,35 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
         background: SIDEBAR,
         borderTop: `1px solid ${BORDER}`,
         fontFamily: MONO,
-        fontSize: TYPE.tick,
+        fontSize: TYPE.status,
         letterSpacing: '0.05em',
         whiteSpace: 'nowrap',
       }}
     >
       {/* Inline rather than in App.css because it is the only rule this
           component needs — same pattern the outage feed uses for its pulse. */}
-      <style>{`.repo-link:hover { color: ${WHITE} } .source-link:hover { color: ${CYAN} }`}</style>
+      <style>{`.repo-link:hover { color: ${WHITE} } .source-link:hover { color: ${CYAN} } .footer-sources::-webkit-scrollbar { display: none }`}</style>
 
       {!narrow && <span style={{ color: MUTED }}>SOURCES</span>}
-      {!narrow && <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {!narrow && <span
+        ref={sourcesRef}
+        className="footer-sources"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          minWidth: 0,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          // Room for a keyboard focus ring inside the scroll clip, offset by
+          // the negative margin so the names don't move.
+          padding: 3,
+          margin: '0 -3px',
+          ...(sourcesMore.left || sourcesMore.right
+            ? { maskImage: sourcesFade(sourcesMore), WebkitMaskImage: sourcesFade(sourcesMore) }
+            : null),
+        }}
+      >
         {SOURCES.map((source, i) => (
           <span key={source.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {i > 0 && <span style={{ color: BORDER_STRONG }}>·</span>}
@@ -118,11 +174,14 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
 
       {!narrow && (
         <>
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* paddingLeft keeps the divider-width break (10 + 10) from the
+              source list when it runs right up to this, as it does while
+              scrolled; with room to spare the auto margin absorbs it. */}
+          <span style={{ marginLeft: 'auto', paddingLeft: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: link.color }} />
             <span style={{ color: link.color }}>{link.label}</span>
           </span>
-          <span style={{ width: 1, height: 12, background: BORDER }} />
+          <span style={{ width: 1, height: 12, background: BORDER, flexShrink: 0 }} />
         </>
       )}
       <span
@@ -139,7 +198,7 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
         </span>
       </span>
 
-      <span style={{ width: 1, height: 12, background: BORDER }} />
+      <span style={{ width: 1, height: 12, background: BORDER, flexShrink: 0 }} />
 
       {/* The tool's account of itself sits immediately before the byline: the
           two answer the same question a viewer has on arrival — who made this
@@ -147,17 +206,17 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
           item parked elsewhere. */}
       <a
         {...linkProps('/methodology')}
-        className="repo-link"
-        style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
+        className="source-link"
+        style={{ color: WHITE, ...PAGE_LINK_UNDERLINE, flexShrink: 0 }}
       >
         METHODOLOGY
       </a>
-      <span style={{ width: 1, height: 12, background: BORDER }} />
+      <span style={{ width: 1, height: 12, background: BORDER, flexShrink: 0 }} />
       <a
         {...linkProps('/privacy')}
         ref={privacyRef}
-        className="repo-link"
-        style={{ color: MUTED, textDecoration: 'none', flexShrink: 0 }}
+        className="source-link"
+        style={{ color: WHITE, ...PAGE_LINK_UNDERLINE, flexShrink: 0 }}
       >
         PRIVACY
       </a>
@@ -167,12 +226,13 @@ export default function StatusBar({ status = 'ok', dataAge = null, narrow = fals
           width: 1,
           height: 12,
           background: BORDER,
+          flexShrink: 0,
           visibility: narrow && bylineWrapped ? 'hidden' : 'visible',
         }}
       />
 
-      {/* Byline and repo link. Sized to the bar's existing 9px/24px rhythm —
-          the 11px mark sits inside the 24px height, so nothing grows. One
+      {/* Byline and repo link. Sized to the bar's 24px rhythm — the 11px
+          mark sits inside the 24px height, so nothing grows. One
           unit, so a phone-width wrap never splits the name from the icon. */}
       <span ref={bylineRef} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <a

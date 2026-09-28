@@ -209,19 +209,20 @@ function Stat({ label, value, title }) {
 
 // One dock button. The highlighted border is what ties it to the panel it
 // opened at the globe's edge (App's DockColumn / DockPanel).
-function DockItem({ id, label, badge, badgeColor, pulse, open, onToggle, stretch = false }) {
+function DockItem({ id, label, title, badge, badgeColor, pulse, open, onToggle, stretch = false }) {
   return (
     <button
       type="button"
       onClick={() => onToggle(id)}
       aria-expanded={open}
+      title={title}
       style={{
         height: 30,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 7,
-        // On phones the three buttons share the row equally.
+        // On phones the buttons share the row equally.
         flex: stretch ? 1 : 'none',
         background: open ? RAISED : 'transparent',
         border: `1px solid ${open ? HIGHLIGHT : BORDER}`,
@@ -258,9 +259,9 @@ function DockItem({ id, label, badge, badgeColor, pulse, open, onToggle, stretch
 // as before (ranking and satellites on the left, outages on the right), any
 // combination can be open at once, and nothing is open on load so the globe
 // starts clean.
-export default function CommandBar({ countries, selectedCode, onSelectCountry, counts, openPanels, onTogglePanel, onCloseAll, narrow = false }) {
+export default function CommandBar({ countries, selectedCode, onSelectCountry, counts, openPanels, onTogglePanel, onCloseAll, cables, showCables, onToggleCables, narrow = false }) {
   const anyOpen = Object.values(openPanels).some(Boolean)
-  // Tablet widths: the full desktop row needs ~1100px, so drop the counters
+  // Tablet widths: the full desktop row needs ~1240px, so drop the counters
   // and show the SCSP emblem instead of the full lockup.
   const compactHeader = useMediaQuery(COMPACT_HEADER_QUERY)
 
@@ -288,6 +289,15 @@ export default function CommandBar({ countries, selectedCode, onSelectCountry, c
         stretch={narrow}
       />
       <DockItem id="satellites" label="SATELLITES" open={openPanels.satellites} onToggle={onTogglePanel} stretch={narrow} />
+      {/* Not a panel: toggles the submarine-cable layer on the globe directly. */}
+      <DockItem
+        id="cables"
+        label={narrow || compactHeader ? 'CABLES' : 'SUBMARINE CABLES'}
+        title={`${cables.routes.length} cables · ${cables.landing_points.length} landing points · via TeleGeography`}
+        open={showCables}
+        onToggle={onToggleCables}
+        stretch={narrow}
+      />
     </>
   )
 

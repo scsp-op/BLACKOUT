@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getMethodologyDoc } from '../lib/api'
 import { splitNumber } from '../lib/toc'
-import { BORDER, BORDER_STRONG, CYAN, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
+import { BORDER, BORDER_STRONG, HIGHLIGHT, MONO, MUTED, RAISED, SANS, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // Distance from the top of the scroll container at which a heading counts as
 // "the section you are reading". Matching the prose's `scroll-margin-top` keeps
@@ -234,7 +234,7 @@ function TocRail({ toc, activeId, onJump }) {
                   display: 'flex',
                   gap: 10,
                   padding: isSection ? '7px 4px 7px 18px' : '5px 4px 5px 30px',
-                  borderLeft: `2px solid ${active ? CYAN : 'transparent'}`,
+                  borderLeft: `2px solid ${active ? HIGHLIGHT : 'transparent'}`,
                   textDecoration: 'none',
                   lineHeight: 1.45,
                 }}
@@ -249,7 +249,7 @@ function TocRail({ toc, activeId, onJump }) {
                     width: NUMBER_GUTTER,
                     flexShrink: 0,
                     paddingTop: isSection ? 1.5 : 1,
-                    color: active ? CYAN : MUTED,
+                    color: active ? HIGHLIGHT : MUTED,
                   }}
                 >
                   {number ?? ''}
@@ -259,7 +259,7 @@ function TocRail({ toc, activeId, onJump }) {
                     fontFamily: SANS,
                     fontSize: isSection ? 13.5 : 13,
                     fontWeight: isSection ? 500 : 400,
-                    color: active ? CYAN : isSection ? '#c3cad6' : MUTED,
+                    color: active ? HIGHLIGHT : isSection ? '#c3cad6' : MUTED,
                   }}
                 >
                   {title}

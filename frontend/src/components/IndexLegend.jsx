@@ -3,12 +3,11 @@ import { BORDER, HIGHLIGHT, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 // Matches the globe choropleth ramp in Globe.jsx (green → amber → crimson).
 const RAMP = 'linear-gradient(90deg, #6c9a5b 0%, #d97706 50%, #b31942 100%)'
 
-// Unpositioned on purpose — App.jsx renders this inside a shared, centered
-// bottom row alongside CableLegend, so the pair centers as one group
-// regardless of either panel's content-driven width.
+// Unpositioned on purpose — App.jsx renders this inside a centered bottom row,
+// so it centers regardless of its content-driven width.
 //
 // `compact` is the phone-width variant: shorter title, shorter ramp, smaller
-// labels and no source note, so it fits beside CableLegend on a phone.
+// labels and no source note, so it fits on a phone.
 export default function IndexLegend({ show, onToggle, compact = false }) {
   return (
     <div

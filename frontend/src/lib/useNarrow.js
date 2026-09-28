@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 // into two rows, dock panels open full-width one at a time, the country
 // sidebar becomes a bottom sheet and the legends and status bar compact.
 // Between that and full desktop (COMPACT_HEADER) only the header trims — its
-// counters and the full SCSP lockup need ~1100px. Above, desktop is untouched.
-// NARROW ends at 820px because the trimmed one-row header still needs ~795px;
+// counters and the full SCSP lockup need ~1240px. Above, desktop is untouched.
+// NARROW ends at 870px because the trimmed one-row header still needs ~863px;
 // portrait tablets up to that width get the stacked layout, which suits them.
-export const NARROW_QUERY = '(max-width: 820px)'
-export const COMPACT_HEADER_QUERY = '(max-width: 1100px)'
+export const NARROW_QUERY = '(max-width: 870px)'
+export const COMPACT_HEADER_QUERY = '(max-width: 1240px)'
 
 export function useMediaQuery(query) {
   const [matches, setMatches] = useState(() => window.matchMedia(query).matches)

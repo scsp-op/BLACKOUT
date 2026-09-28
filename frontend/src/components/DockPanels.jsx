@@ -2,8 +2,8 @@ import { BORDER, MONO, MUTED, SIDEBAR, TYPE, WHITE } from '../theme'
 
 // A column of header-dock panels floating at one side of the globe, as the
 // panels did before the dock: an absolute overlay inside <main>, so opening a
-// panel never resizes the globe or moves the censorship-index / cable legend
-// pair centred at the bottom of <main>. At default zoom the columns sit in the
+// panel never resizes the globe or moves the censorship-index legend centred
+// at the bottom of <main>. At default zoom the columns sit in the
 // empty space beside the globe. `maxHeight` stops each column above that
 // legend row (12 top + 12 bottom + ~36 row + 12 gap = 72) so it never covers
 // it; `cap` tightens it further for a panel that shouldn't run the full height.
