@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import BgpVisibilityChart from './BgpVisibilityChart'
 import CategoryBreakdown from './CategoryBreakdown'
+import FreedomRank from './FreedomRank'
 import GlobalIndices from './GlobalIndices'
 import Http3ShareChart from './Http3ShareChart'
 import MessagingStatus from './MessagingStatus'
@@ -284,6 +285,7 @@ export default function CountrySidebar({ country, layer, starlinkStatus, ixpStat
             ×
           </button>
         </div>
+        <FreedomRank countryCode={country.country_code} />
       </div>
 
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 0 }}>
