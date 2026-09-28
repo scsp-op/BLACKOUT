@@ -47,6 +47,7 @@ export const SANS        = '"Inter", system-ui, sans-serif'
 // hand-pick an off-scale size.
 export const TYPE = {
   tick:     9, // chart axis ticks, footnotes, source tags
+  status:   9.5, // bottom status bar: between footnote and control size
   label:   10, // mono: uppercase labels, codes, figures, controls
   body:    11, // Inter: names, list entries, running text
   title:   13, // country / satellite name, wordmark

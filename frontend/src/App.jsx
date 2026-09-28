@@ -4,7 +4,6 @@ import CountrySidebar from './components/CountrySidebar'
 import OutageFeed from './components/OutageFeed'
 import GlobalRanking from './components/GlobalRanking'
 import IndexLegend from './components/IndexLegend'
-import CableLegend from './components/CableLegend'
 import SatelliteLegend from './components/SatelliteLegend'
 import SatelliteCard from './components/SatelliteCard'
 import CommandBar from './components/CommandBar'
@@ -587,6 +586,9 @@ export default function App() {
         openPanels={openPanels}
         onTogglePanel={togglePanel}
         onCloseAll={() => setOpenPanels({ ranking: false, outages: false, satellites: false })}
+        cables={cables}
+        showCables={showCables}
+        onToggleCables={() => setShowCables((v) => !v)}
         narrow={narrow}
       />
 
@@ -629,14 +631,12 @@ export default function App() {
             }}
           />
 
-          {/* Censorship index + submarine cables: the bottom-centre pair, as
-              before the dock existed. Centered as one group so the pair's
-              combined width — not either panel's — is what centers, and
-              inside <main> so it stays centered under the globe when the
-              country sidebar opens. Dock panels float over <main> rather than
-              resizing it, so opening them never moves this pair. `wrap-reverse`
-              stacks the pair upward when <main> gets too narrow for both,
-              and below the width of one it hides (see .globe-legends). */}
+          {/* Censorship index, centred at the bottom of <main> so it stays
+              centred under the globe when the country sidebar opens. Dock
+              panels float over <main> rather than resizing it, so opening
+              them never moves it. Below its width it hides (see
+              .globe-legends). The submarine-cable toggle lives in the header
+              dock, next to SATELLITES. */}
           <div
             // Desktop only: the phone layout uses the compact legends, which
             // fit, so the narrow-container hide rule mustn't apply to them.
@@ -644,9 +644,6 @@ export default function App() {
             style={{
               position: 'absolute',
               bottom: 12,
-              // 8px side margins and gap (not 12) so the pair (~858px) still
-              // fits on one row when the country sidebar leaves <main> 880px
-              // wide at a 1280 window, instead of wrapping Cables upward.
               left: 8,
               // Landscape phone: stay within the map area left of the side sheet.
               right: sideSheet && selectedCode ? `calc(${SIDE_SHEET_FRACTION * 100}% + 8px)` : 8,
@@ -658,23 +655,47 @@ export default function App() {
               pointerEvents: 'none',
             }}
           >
-            {/* display: flex on both wrappers lets each legend box stretch to
-                the row's height, so the two boxes match — Cables is naturally
-                a few px shorter than Index, and top-aligned it sat visibly
-                high. Their contents are centred vertically inside. */}
             <div style={{ pointerEvents: 'auto', display: 'flex' }}>
               <IndexLegend show={showIndex} onToggle={() => setShowIndex((v) => !v)} compact={narrow} />
             </div>
-            <div style={{ pointerEvents: 'auto', display: 'flex' }}>
-              <CableLegend
-                show={showCables}
-                onToggle={() => setShowCables((v) => !v)}
-                routeCount={cables.routes.length}
-                landingCount={cables.landing_points.length}
-                compact={narrow}
-              />
-            </div>
           </div>
+
+          {/* Submarine-cable counts while the header's cable toggle is on: a
+              tab hanging flush off the header at top-centre, with no top border
+              so it shares the header's rule instead of doubling it. Same
+              horizontal bounds as the index legend, and beneath the zIndex-5
+              dock panels so a full-width phone panel covers it rather than the
+              other way round. */}
+          {showCables && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 8,
+                right: sideSheet && selectedCode ? `calc(${SIDE_SHEET_FRACTION * 100}% + 8px)` : 8,
+                display: 'flex',
+                justifyContent: 'center',
+                zIndex: 4,
+                pointerEvents: 'none',
+              }}
+            >
+              <span
+                style={{
+                  background: SIDEBAR,
+                  border: `1px solid ${BORDER}`,
+                  borderTop: 'none',
+                  padding: '2px 10px',
+                  fontFamily: MONO,
+                  fontSize: TYPE.tick,
+                  letterSpacing: '0.03em',
+                  color: MUTED,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {cables.routes.length} routes · {cables.landing_points.length} landings
+              </span>
+            </div>
+          )}
 
           {/* Dock panels: floating columns at the globe's left and right
               edges, like the panels before the dock (see DockColumn). */}

@@ -26,10 +26,10 @@ p {
   margin: 0;
 }
 
-/* The censorship-index / submarine-cable pair at the bottom of the globe
-   (App.jsx). The Censorship Index strip is fixed-content and nowrap, ~500px
-   wide, so if the country sidebar leaves the globe area narrower than that
-   (a small window), the pair would only clip — hide it until there's room.
+/* The censorship-index legend at the bottom of the globe (App.jsx). The
+   strip is fixed-content and nowrap, ~500px wide, so if the country sidebar
+   leaves the globe area narrower than that (a small window), it would only
+   clip — hide it until there's room.
    !important because the element's layout is set inline. */
 @container (max-width: 520px) {
   .globe-legends {
