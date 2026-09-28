@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getRankings } from '../lib/api'
 import { AMBER, BORDER, CRIMSON, DIM, HIGHLIGHT, LOCAL, MONO, MUTED, TYPE, WHITE } from '../theme'
 
@@ -65,6 +65,21 @@ export default function GlobalRanking() {
   }, [source])
 
   const meta = SOURCES.find((s) => s.key === source)
+
+  // The list runs most censored first, but each row is numbered with the
+  // country's rank counted from the freest (#1 = most free, ties share a
+  // rank) — the way RSF numbers its own table, and the same number the
+  // country sidebar shows (FreedomRank). So the list opens at the bottom of
+  // the table and counts down.
+  const rankByScore = useMemo(() => {
+    const ranks = new Map()
+    rows.forEach((r) => {
+      if (!ranks.has(r.score_overall)) {
+        ranks.set(r.score_overall, 1 + rows.filter((x) => x.score_overall > r.score_overall).length)
+      }
+    })
+    return ranks
+  }, [rows])
   const year = rows[0]?.year
 
   return (
@@ -95,7 +110,7 @@ export default function GlobalRanking() {
         {error && rows.length === 0 && (
           <p style={{ padding: '8px 10px', fontFamily: MONO, fontSize: TYPE.label, color: MUTED }}>Rankings unavailable.</p>
         )}
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const color = scoreColor(r.score_overall)
           return (
             <div
@@ -103,8 +118,9 @@ export default function GlobalRanking() {
               title={`${r.country_name} — ${Math.round(r.score_overall)}/100 free${r.classification ? ` · ${r.classification}` : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px' }}
             >
-              <span style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED, width: 18, flexShrink: 0, textAlign: 'right' }}>
-                {i + 1}
+              {/* 22px: room for a three-digit rank. */}
+              <span className="tabular" style={{ fontFamily: MONO, fontSize: TYPE.label, color: MUTED, width: 22, flexShrink: 0, textAlign: 'right' }}>
+                {rankByScore.get(r.score_overall)}
               </span>
               <span
                 style={{ fontSize: TYPE.body, color: WHITE, width: 110, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
