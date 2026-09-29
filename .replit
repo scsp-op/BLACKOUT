@@ -84,6 +84,13 @@ SNAPSHOT_KEY = "mena_ai.db.gz"
 # while the process itself looks perfectly healthy, which is the reason the
 # old image installed ca-certificates and replit.nix installs pkgs.cacert.
 SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
+# Tokio defaults to one runtime thread per vCPU, which is 2 on this VM. A
+# request waiting for the single SQLite connection holds its thread while it
+# waits, so two slow ones (or one during a snapshot's VACUUM) stalled every
+# other route, including the SQLite-free satellite endpoint and static files.
+# 8 threads keep some free; measured under 60 concurrent DB requests, the
+# satellite endpoint went from 120-400 ms to 50-75 ms.
+TOKIO_WORKER_THREADS = "8"
 
 # App Storage. Declared explicitly rather than left to the sidecar's own
 # default-bucket lookup, because that lookup never gets a chance in a
