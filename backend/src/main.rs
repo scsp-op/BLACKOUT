@@ -1,4 +1,9 @@
-use axum::{Extension, Router, routing::get};
+use axum::{
+    Extension, Router,
+    http::{HeaderValue, header},
+    response::Response,
+    routing::get,
+};
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 use tower_http::compression::CompressionLayer;
@@ -216,9 +221,12 @@ async fn main() -> anyhow::Result<()> {
         // ServeDir, and anything ServeDir can't find falls through to
         // index.html so client-side routes and deep links resolve.
         .fallback_service(spa_service(&static_dir))
+        .layer(axum::middleware::map_response(vary_on_encoding))
         // Applied last so it wraps every route above *and* the SPA fallback —
         // the static bundle is 13.7 MB, most of it Cesium, and was being
-        // served uncompressed to every first-time visitor.
+        // served uncompressed to every first-time visitor. Bundle files with
+        // a build-time `.gz` (see `spa_service`) now pass through it as-is;
+        // gzipping them here cost ~150 ms of CPU per visitor for Cesium.js.
         //
         // The default predicate skips bodies under 32 bytes and already-
         // compressed content types (images, video), so the JPEG textures and
@@ -302,8 +310,28 @@ fn report_persistence(state: &AppState, db_path: &str, db_existed: bool) {
 
 /// `ServeDir` for the built SPA, falling back to `index.html` so client-side
 /// routes and refreshes on a deep link return the app instead of a 404.
+///
+/// `precompressed_gzip` serves the `.gz` sibling that the frontend build
+/// writes (frontend/scripts/precompress.mjs) to clients that accept gzip, and
+/// the plain file to everyone else or when no `.gz` exists.
 fn spa_service(dir: &str) -> ServeDir<ServeFile> {
-    ServeDir::new(dir).fallback(ServeFile::new(format!("{dir}/index.html")))
+    ServeDir::new(dir)
+        .precompressed_gzip()
+        .fallback(ServeFile::new(format!("{dir}/index.html")))
+}
+
+/// Precompressed files leave `ServeDir` with `Content-Encoding` already set,
+/// so `CompressionLayer` passes them through untouched — and it only adds
+/// `Vary: accept-encoding` to responses it compresses itself. Without this, a
+/// shared cache could hand the gzip variant to a client that never asked for
+/// it. Responses that already carry `Vary` (the satellite handler sets its
+/// own) are left alone.
+async fn vary_on_encoding(mut res: Response) -> Response {
+    let headers = res.headers_mut();
+    if headers.contains_key(header::CONTENT_ENCODING) && !headers.contains_key(header::VARY) {
+        headers.insert(header::VARY, HeaderValue::from_static("accept-encoding"));
+    }
+    res
 }
 
 /// The optional API tokens gate whole data sources, and their absence used to
