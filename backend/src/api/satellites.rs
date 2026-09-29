@@ -73,8 +73,8 @@ struct CachedPositions {
     gzipped: Bytes,
 }
 
-fn cache() -> &'static Mutex<HashMap<String, CachedPositions>> {
-    static CACHE: OnceLock<Mutex<HashMap<String, CachedPositions>>> = OnceLock::new();
+fn cache() -> &'static Mutex<HashMap<Option<String>, CachedPositions>> {
+    static CACHE: OnceLock<Mutex<HashMap<Option<String>, CachedPositions>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -169,27 +169,45 @@ pub struct SatellitesQuery {
     pub categories: Option<String>,
 }
 
+/// Four times the seven categories the default group list produces. The
+/// frontend sends at most one, and every entry is compared against every
+/// object in the catalog, so a longer list is only ever a way to burn CPU.
+const MAX_CATEGORIES: usize = 32;
+
+/// `?categories=` in canonical form: trimmed, lowercased, sorted and
+/// deduplicated, so equivalent filters match identically and share one cache
+/// entry. `None` is no filter; `Some(vec![])` (an empty or all-comma value)
+/// matches nothing. More than `MAX_CATEGORIES` distinct entries is a 400.
+fn parse_categories(raw: Option<&str>) -> Result<Option<Vec<String>>, StatusCode> {
+    let Some(raw) = raw else { return Ok(None) };
+    let mut list: Vec<String> = raw
+        .split(',')
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect();
+    list.sort();
+    list.dedup();
+    if list.len() > MAX_CATEGORIES {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(Some(list))
+}
+
+/// `None` for the unfiltered response and `Some` for any filter, so the two
+/// can never collide. They used to share the key `""`: one `?categories=`
+/// request cached an empty result under the key every unfiltered viewer
+/// reads, blanking the satellite layer for everyone until the entry expired.
+fn cache_key(wanted: &Option<Vec<String>>) -> Option<String> {
+    wanted.as_ref().map(|list| list.join(","))
+}
+
 pub async fn list_satellites(
     Extension(catalog): Extension<SatelliteCatalog>,
     Query(params): Query<SatellitesQuery>,
     headers: HeaderMap,
 ) -> Result<Response, StatusCode> {
-    let wanted = params.categories.map(|raw| {
-        raw.split(',')
-            .map(|s| s.trim().to_ascii_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    // Sorted so `?categories=a,b` and `?categories=b,a` share one entry.
-    let cache_key = match &wanted {
-        Some(list) => {
-            let mut sorted = list.clone();
-            sorted.sort();
-            sorted.join(",")
-        }
-        None => String::new(),
-    };
+    let wanted = parse_categories(params.categories.as_deref())?;
+    let cache_key = cache_key(&wanted);
     let ttl = position_cache_ttl();
 
     // Looked up and released before any work: holding this across the SGP4
@@ -422,6 +440,45 @@ pub async fn satellite_orbit(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn no_filter_and_an_empty_filter_never_share_a_cache_key() {
+        let none = parse_categories(None).unwrap();
+        let empty = parse_categories(Some("")).unwrap();
+        let commas = parse_categories(Some(" , ,")).unwrap();
+        assert_eq!(none, None);
+        assert_eq!(empty, Some(vec![]));
+        assert_eq!(commas, Some(vec![]));
+        assert_ne!(cache_key(&none), cache_key(&empty));
+        assert_ne!(cache_key(&none), cache_key(&commas));
+    }
+
+    #[test]
+    fn equivalent_filters_normalise_to_one_list() {
+        let a = parse_categories(Some("Stations, starlink,stations,,")).unwrap();
+        let b = parse_categories(Some("starlink,stations")).unwrap();
+        assert_eq!(
+            a,
+            Some(vec!["starlink".to_string(), "stations".to_string()])
+        );
+        assert_eq!(cache_key(&a), cache_key(&b));
+    }
+
+    #[test]
+    fn an_oversized_filter_is_rejected_after_deduplication() {
+        let at_cap = (0..MAX_CATEGORIES)
+            .map(|i| format!("c{i}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        assert!(parse_categories(Some(&at_cap)).is_ok());
+        let over = format!("{at_cap},one-more");
+        assert_eq!(parse_categories(Some(&over)), Err(StatusCode::BAD_REQUEST));
+        // Repeats collapse before the cap applies, so they cost one comparison.
+        assert_eq!(
+            parse_categories(Some(&"x,".repeat(10_000))).unwrap(),
+            Some(vec!["x".to_string()])
+        );
+    }
 
     /// 4 dp of latitude is ~11 m and 3 dp of altitude is ~1 m. Anything
     /// coarser starts to be visible when the camera is zoomed in on a single
